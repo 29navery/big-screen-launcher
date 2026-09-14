@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Big Screen Launcher</title>
+    <link rel="icon" href="assets/app-icon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <link id="customThemeStylesheet" rel="stylesheet" href="" />
+  </head>
+  <body>
+    <div id="stickyNotice" class="sticky-notice" hidden>
+      <span id="stickyNoticeText"></span
+      ><button id="stickyNoticeClose" aria-label="Dismiss">×</button>
+    </div>
+    <div id="morphFocus" class="morph-focus" aria-hidden="true"></div>
+    <div id="gamepadCursor" class="gamepad-cursor" aria-hidden="true"></div>
+    <div class="custom-titlebar">
+      <div class="titlebar-brand">
+        <span class="titlebar-mark">✦</span><span>Big Screen Launcher</span>
+      </div>
+      <div class="titlebar-right">
+        <span class="titlebar-version">v179</span>
+        <div class="titlebar-controls">
+          <button id="winMin" title="Minimize" aria-label="Minimize">
+            <svg viewBox="0 0 24 24"><path d="M6 18h12"></path></svg></button
+          ><button id="winMax" title="Maximize" aria-label="Maximize">
+            <svg viewBox="0 0 24 24">
+              <rect x="7" y="7" width="10" height="10" rx="1.5"></rect>
+            </svg></button
+          ><button id="winClose" title="Close" aria-label="Close">
+            <svg viewBox="0 0 24 24">
+              <path d="M7 7l10 10"></path>
+              <path d="M17 7 7 17"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <main id="app" class="app">
+      <aside class="rail">
+        <button data-focusable data-view="library" title="Library" aria-label="Library">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+          </svg></button
+        ><button data-focusable data-view="downloads" title="Downloads" aria-label="Downloads">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3v10"></path>
+            <path d="m7 8 5 5 5-5"></path>
+            <path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"></path>
+          </svg></button
+        ><button data-focusable data-view="imports" title="Imports" aria-label="Imports">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 6h11"></path>
+            <path d="M9 12h11"></path>
+            <path d="M9 18h11"></path>
+            <path d="m3.5 6 1.5 1.5L7.5 5"></path>
+            <path d="m3.5 12 1.5 1.5L7.5 11"></path>
+            <path d="m3.5 18 1.5 1.5L7.5 17"></path>
+          </svg></button
+        ><button data-focusable data-view="settings" title="Settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"></path>
+            <path
+              d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.05.05a2.1 2.1 0 0 1-2.97 2.97l-.05-.05a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.08 1.65V21a2.1 2.1 0 0 1-4.2 0v-.08A1.8 1.8 0 0 0 8.45 19.3a1.8 1.8 0 0 0-1.98.36l-.05.05a2.1 2.1 0 0 1-2.97-2.97l.05-.05a1.8 1.8 0 0 0 .36-1.98 1.8 1.8 0 0 0-1.65-1.08H2a2.1 2.1 0 0 1 0-4.2h.08A1.8 1.8 0 0 0 3.7 8.45a1.8 1.8 0 0 0-.36-1.98l-.05-.05a2.1 2.1 0 0 1 2.97-2.97l.05.05a1.8 1.8 0 0 0 1.98.36 1.8 1.8 0 0 0 1.08-1.65V2a2.1 2.1 0 0 1 4.2 0v.08a1.8 1.8 0 0 0 1.08 1.62 1.8 1.8 0 0 0 1.98-.36l.05-.05a2.1 2.1 0 0 1 2.97 2.97l-.05.05a1.8 1.8 0 0 0-.36 1.98 1.8 1.8 0 0 0 1.65 1.08H22a2.1 2.1 0 0 1 0 4.2h-.08A1.8 1.8 0 0 0 19.4 15Z"
+            ></path>
+          </svg>
+        </button>
+      </aside>
+      <section class="surface">
+        <header class="topbar">
+          <div>
+            <p>Big Screen Launcher</p>
+            <h1 id="title">Library</h1>
+          </div>
+          <span id="status" hidden>Ready</span>
+        </header>
+        <div id="view">
+          <div class="startup-library" aria-hidden="true">
+            <div class="startup-card"></div>
+            <div class="startup-card"></div>
+            <div class="startup-card"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+    <div class="controller-hint" aria-hidden="true">
+      <span class="button-diamond"
+        ><span class="face face-y"></span><span class="face face-x"></span
+        ><span class="face face-b"></span><span class="face face-a"></span></span
+      ><span class="hint-copy">A Select • B Back • X Favorite • Y Menu</span>
+    </div>
+    <div id="updatePrompt" class="update-prompt" hidden>
+      <div>
+        <strong>Update available</strong><span id="updateText">A newer launcher is available.</span>
+      </div>
+      <button id="updateDownload">Download</button><button id="updateChangelog">Changelog</button
+      ><button id="updateLater">Later</button>
+    </div>
+    <script src="renderer.js"></script>
+    <script>
+      document.getElementById('winMin').onclick = () => window.launcher.windowControls.minimize();
+      document.getElementById('winMax').onclick = () => window.launcher.windowControls.maximize();
+      document.getElementById('winClose').onclick = () => window.launcher.windowControls.close();
+    </script>
+  </body>
+</html>
