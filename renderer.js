@@ -8,7 +8,7 @@ let state = {
   selected: new Set(),
   importProgress: null,
   status: 'Ready',
-  appVersion: '178',
+  appVersion: '179',
   themesList: null,
   themesListOpen: false,
   themesListLoading: false,
