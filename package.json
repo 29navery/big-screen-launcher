@@ -1,11 +1,23 @@
 {
   "name": "big-screen-launcher",
+  "productName": "Big Screen Launcher",
+  "description": "Better Steam!",
+  "author": "nicky_lul",
   "version": "1.7.9",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --windows"
+  },
+  "build": {
+    "appId": "com.nickylul.BSL",
+    "win": {
+      "icon": "assets/app-icon.ico"
+    },
+    "mac": {
+      "icon": "assets/app-icon.icns"
+    }
   },
   "devDependencies": {
     "electron": "^44.3.0",
