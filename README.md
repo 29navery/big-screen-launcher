@@ -1,3 +1,3 @@
 # Big Screen Launcher
 
-Get it from [tungstenball.org](https://tungstenball.org/bsl.html)
+Get it from [tungstenball.org](https://tungstenball.org/launcher.html)
