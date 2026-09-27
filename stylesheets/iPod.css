@@ -191,7 +191,7 @@ button {
 }
 
 #progress {
-    width: 50%;
+    width: 25%;
     height: 100%;
     background: linear-gradient(to bottom, #9cccf8 0%, #598fc9 60%, #56b2d6 85%, #77ebff 100%);
 }
