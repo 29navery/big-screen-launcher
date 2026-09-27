@@ -79,6 +79,7 @@ function playTrackAtIndex(index) {
 
     player.play().catch(err => console.error("Audio playback error:", err));
     sendStatus();
+    loadLyrics(currentMetadata.artist, currentMetadata.title);
 }
 
 // helpers for time
@@ -127,6 +128,8 @@ function updateDisplay() {
     time.textContent = formatTime(player.currentTime);
     progress.style.setProperty('width', getProgressPercentage(player.currentTime, player.duration) + '%');
     negative.textContent = getRemainingTime(player.currentTime, player.duration);
+
+    updateLyricsSync();
 }
 
 // send the status
@@ -203,7 +206,16 @@ ipcRenderer.on('request-audio-status', () => {
     sendStatus();
 });
 
-// buttons 
+// buttons
+document.getElementById('menu-button').addEventListener('click', () => {
+    if (document.getElementById('miniplayer-img').style.display !== 'flex') {
+        document.getElementById('miniplayer-img').style.setProperty('display', 'flex');
+        document.getElementById('lyrics-screen').style.setProperty('display', 'none');
+    } else {
+        document.getElementById('miniplayer-img').style.setProperty('display', 'none');
+        document.getElementById('lyrics-screen').style.setProperty('display', 'block');
+    }
+});
 document.getElementById('pause-button').addEventListener('click', () => {
     ipcRenderer.send('send-audio-command', { action: 'toggle' });
 });
@@ -215,3 +227,110 @@ document.getElementById('back-button').addEventListener('click', () => {
 });
 
 setInterval(updateDisplay, 500);
+player.volume = 0.2;
+
+const progressBar = document.getElementById('progress-bar');
+
+progressBar.addEventListener('click', (e) => {
+
+    if (!player.duration || isNaN(player.duration)) return;
+
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    let percentage = (clickX / rect.width) * 100;
+
+    percentage = Math.max(0, Math.min(100, percentage));
+
+    player.currentTime = player.duration * (percentage / 100);
+    updateDisplay();
+    sendStatus();
+})
+
+
+let lyricsData = [];
+let currentLyricIndex = -1;
+
+// timed lyrics — def ai coded
+
+function parseLRC(lrcText) {
+    if (!lrcText) return [];
+    const lines = lrcText.split('\n');
+    const result = [];
+    const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/;
+
+    for (const line of lines) {
+        const match = timeRegex.exec(line);
+        if (match) {
+            const minutes = parseInt(match[1], 10);
+            const seconds = parseInt(match[2], 10);
+            const milliseconds = parseInt(match[3].padEnd(3, '0'), 10);
+            
+            const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
+            const text = line.replace(timeRegex, '').trim();
+
+            if (text) {
+                result.push({ time: totalSeconds, text });
+            }
+        }
+    }
+    return result;
+}
+
+async function loadLyrics(artist, title) {
+    const listEl = document.getElementById('lyrics-container');
+    if (!listEl) return;
+
+    listEl.innerHTML = '<p class="lyric-line">Loading lyrics...</p>';
+    lyricsData = [];
+    currentLyricIndex = -1;
+
+    try {
+        const query = `artist_name=${encodeURIComponent(artist)}&track_name=${encodeURIComponent(title)}`;
+        const res = await fetch(`https://lrclib.net/api/get?${query}`);
+        
+        if (!res.ok) throw new Error('Lyrics not found');
+        const data = await res.json();
+
+        if (data.syncedLyrics) {
+            lyricsData = parseLRC(data.syncedLyrics);
+            listEl.innerHTML = lyricsData
+                .map((line, idx) => `<p class="lyric-line" id="lyric-${idx}">${line.text}</p>`)
+                .join('');
+        } else {
+            listEl.innerHTML = '<p class="lyric-line">No timed lyrics available</p>';
+        }
+    } catch (err) {
+        listEl.innerHTML = '<p class="lyric-line">No lyrics found</p>';
+    }
+}
+
+function updateLyricsSync() {
+    if (!lyricsData.length) return;
+
+    const currentTime = player.currentTime;
+    let activeIndex = -1;
+
+    for (let i = 0; i < lyricsData.length; i++) {
+        if (currentTime >= lyricsData[i].time) {
+            activeIndex = i;
+        } else {
+            break;
+        }
+    }
+
+    if (activeIndex !== currentLyricIndex) {
+        if (currentLyricIndex !== -1) {
+            const prevEl = document.getElementById(`lyric-${currentLyricIndex}`);
+            if (prevEl) prevEl.classList.remove('active');
+        }
+
+        currentLyricIndex = activeIndex;
+        if (currentLyricIndex !== -1) {
+            const activeEl = document.getElementById(`lyric-${currentLyricIndex}`);
+            if (activeEl) {
+                activeEl.classList.add('active');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }
+}

@@ -3,6 +3,10 @@
     <head>
         <title>iPod</title>
         <link rel="stylesheet" href="stylesheets/iPod.css">
+
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
     </head>
     <body style="display: flex; align-content: center; justify-content: center; justify-items: center; align-content: center;">
         <div id="ipod">
@@ -15,7 +19,16 @@
                         <p id="ipod-title">The Fate of Ophelia</p>
                     </div>
                 </div>
+
                 <img id="miniplayer-img" src="images/The Fate of Ophelia cover.jpg">
+                <div id="lyrics-container">
+                    <p class="lyric-line">Lyrics 1</p>
+                    <p class="lyric-line.active">Lyrics 2</p>
+                    <p class="lyric-line">Lyrics 3</p>
+                    <p class="lyric-line">Lyrics 4</p>
+                    <p class="lyric-line">Lyrics 5</p>
+                </div>
+
                 <div id="ipod-bottom-bar">
                     <p id="seek-time">1:00</p>
                     <div id="progress-bar"><div id="progress"></div> </div>
@@ -23,6 +36,7 @@
                 </div>
             </div>
 
+            <button id="menu-button"></button>
             <button id="pause-button"></button>
             <button id="skip-button"></button>
             <button id="back-button"></button>
