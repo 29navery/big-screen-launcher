@@ -5,10 +5,16 @@ This game launcher features:
 - Downloading pre-installed games
 - Customizing your launcher experience
 - A built-in music player
-<<<<<<< HEAD
   - Import your own songs!
 
 Download official releases at [tungstenball.org](https://tungstenball.org/launcher)!
-=======
 -   Import your own songs!
->>>>>>> 5b7190f (Add initial README with project features)
+
+To install the correct packages to test this, paste the following into a Powershell session that's directory is set to the root of the project:
+`npm install
+npm install music-metadata
+npm install electron-updater
+npm install adm-zip
+npm install node-unrar-js
+npm fund
+npm start`
