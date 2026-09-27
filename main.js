@@ -51,7 +51,7 @@ app.whenReady().then(() => {
         width: 366,
         height: 477,
         resizable: false,
-        show: true,
+        show: false,
         title: 'Big Screen Launcher',
         transparent: true,
         frame: false,
@@ -62,6 +62,12 @@ app.whenReady().then(() => {
         }
     });
     audioWindow.loadFile('background-audio.html');
+    audioWindow.on('close', (event) => {
+        if (!isQuitting) {
+            event.preventDefault();
+            audioWindow.hide();
+        }
+    });
 
     ipcMain.on('send-audio-command', (event, commandData) => {
         if (audioWindow && !audioWindow.isDestroyed()) {
@@ -99,6 +105,11 @@ app.whenReady().then(() => {
         {
             label: 'Music',
             click: () => { mainWindow.show(); mainWindow.focus(); mainWindow.loadFile('music.html'); }
+        },
+        { type: 'separator' },
+        {
+            label: 'Show iPod',
+            click: () => { audioWindow.show(); audioWindow.focus(); }
         },
         { type: 'separator' },
         {
