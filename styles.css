@@ -411,6 +411,29 @@ img.grid-item {
     margin-bottom: 20px;
 }
 
+.queue-banner {
+    display: block;
+    background-color: rgba(193, 215, 219, 0.15);
+    border-radius: 10px;
+    border: 1px solid #dee9eb49;
+    padding: 12px 18px;
+    color: #dee9eb;
+    width: 800px;
+    max-width: 80%;
+    margin: 0 auto;
+    margin-bottom: 20px;
+}
+
+.queue-banner p {
+    margin: 0;
+    margin-top: 3px;
+}
+
+.queue-banner h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
 .stop-download-button {
     font-size: 16px;
     margin-top: 10px;
@@ -493,6 +516,13 @@ img.grid-item {
     box-sizing: border-box;
     padding: 20px 50px; 
     gap: 15px;
+}
+
+#download-grid button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.5);
+    pointer-events: none;
 }
 
 .download-grid button {

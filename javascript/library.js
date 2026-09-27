@@ -4,9 +4,9 @@ async function launchGame(index) {
     const games = await ipcRenderer.invoke('load-games');
     const game = games[index];
 
-    if (game && game.path) {
-        console.log(`Launching game: ${game.name} at ${game.path}`);
-        ipcRenderer.invoke('launch-game-process', game.path);
+    if (game) {
+        console.log(`Launching game: ${game.name || 'Unnamed'}`);
+        ipcRenderer.invoke('launch-game-process', game);
     }
 }
 

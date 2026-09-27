@@ -224,13 +224,6 @@ ipcMain.handle('save-games', (event, gamesArray) => {
     }
 });
 
-const { execFile } = require('child_process');
-ipcMain.handle('launch-game-process', async (event, gamePath) => {
-    execFile(gamePath, (error) => {
-        if (error) console.error('Failed to launch game:', error);
-    });
-});
-
 const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
 
 ipcMain.handle('load-settings', () => {
@@ -394,162 +387,431 @@ ipcMain.handle('extract-mp3-metadata', async (event, filePath) => {
     }
 });
 
+function hasIpcHandler(channel) {
+  // ipcMain._invokeHandlers is a Map holding active handle() channels
+  return ipcMain._invokeHandlers instanceof Map && ipcMain._invokeHandlers.has(channel);
+}
+
 // download da shyt
 
 const https = require('https');
 const http = require('http');
+const AdmZip = require('adm-zip');
+const unrar = require('node-unrar-js');
 
 let activeDownloadReq = null;
-let activeDownloadStream = null;
-let activeDownloadPath = null;
 
-// start
-ipcMain.handle('start-download', async (event, { gameName, downloadUrl, exeName }) => {
-    const gamesDir = path.join(app.getPath('documents'), 'Big Screen Launcher', 'Games');
-    
-    const safeFolderName = gameName.replace(/[/\\?%*:|"<>]/g, '').trim();
-    const targetFolder = path.join(gamesDir, safeFolderName);
-
-    if (!fs.existsSync(targetFolder)) {
-        fs.mkdirSync(targetFolder, { recursive: true });
+ipcMain.handle('launch-game-process', async (event, game) => {
+    if (!game) {
+        throw new Error('No game payload provided to launch-game-process.');
     }
 
-    let fileName = exeName;
-    if (!fileName) {
-        const urlExtension = path.extname(new URL(downloadUrl).pathname) || '.exe';
-        fileName = `${safeFolderName}${urlExtension}`;
-    }
+    let exePath = '';
 
-    const filePath = path.join(targetFolder, fileName);
-    activeDownloadPath = filePath;
+    if (game.path && typeof game.path === 'string' && fs.existsSync(game.path) && fs.statSync(game.path).isFile()) {
+        exePath = game.path;
+    } else {
+        const gameName = (game.name || game.title || '').trim();
 
-    return new Promise((resolve, reject) => {
-        function requestFile(url) {
-            const protocol = url.startsWith('https') ? https : http;
-
-            const req = protocol.get(url, (res) => {
-                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-                    return requestFile(res.headers.location);
-                }
-
-                if (res.statusCode !== 200) {
-                    reject(`Server responded with status code: ${res.statusCode}`);
-                    return;
-                }
-
-                const totalBytes = parseInt(res.headers['content-length'] || '0', 10);
-                let receivedBytes = 0;
-                const startTime = Date.now();
-
-                const fileStream = fs.createWriteStream(filePath);
-                activeDownloadStream = fileStream;
-
-                res.on('data', (chunk) => {
-                    receivedBytes += chunk.length;
-                    fileStream.write(chunk);
-
-                    const elapsedSec = (Date.now() - startTime) / 1000;
-                    const speedBytesPerSec = elapsedSec > 0 ? receivedBytes / elapsedSec : 0;
-                    const remainingBytes = totalBytes - receivedBytes;
-                    const remainingSec = speedBytesPerSec > 0 ? Math.ceil(remainingBytes / speedBytesPerSec) : 0;
-
-                    const percent = totalBytes > 0 ? (receivedBytes / totalBytes) * 100 : 0;
-                    const transferredMB = (receivedBytes / (1024 * 1024)).toFixed(1);
-                    const totalMB = (totalBytes / (1024 * 1024)).toFixed(2);
-
-                    let etaStr = remainingSec < 60 
-                        ? `${remainingSec}s left` 
-                        : `${Math.floor(remainingSec / 60)}m ${remainingSec % 60}s left`;
-
-                    if (mainWindow && !mainWindow.isDestroyed()) {
-                        mainWindow.webContents.send('download-progress', {
-                            gameName,
-                            percent,
-                            transferredMB,
-                            totalMB,
-                            etaStr,
-                            status: 'downloading'
-                        });
-                    }
-                });
-
-                res.on('end', async () => {
-                    fileStream.end();
-                    activeDownloadReq = null;
-                    activeDownloadStream = null;
-
-                    const [art, hero, logo] = await Promise.all([
-                        fetchGameArt(gameName),
-                        fetchGameHero(gameName),
-                        fetchGameLogo(gameName)
-                    ]).catch(() => [null, null, null]);
-
-                    const newGame = {
-                        name: gameName,
-                        path: filePath,
-                        art: art || null,
-                        hero: hero || null,
-                        logo: logo || null
-                    };
-
-                    let savedGames = [];
-                    if (fs.existsSync(gamesFilePath)) {
-                        try {
-                            savedGames = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
-                        } catch (err) {
-                            console.error("Error reading games file:", err);
-                        }
-                    }
-
-                    if (!savedGames.some(g => g.title === gameName)) {
-                        savedGames.push(newGame);
-                        fs.writeFileSync(gamesFilePath, JSON.stringify(savedGames, null, 2), 'utf8');
-                    }
-
-                    if (mainWindow && !mainWindow.isDestroyed()) {
-                        mainWindow.webContents.send('download-progress', {
-                            gameName,
-                            percent: 100,
-                            status: 'completed'
-                        });
-                        mainWindow.webContents.send('library-updated');
-                    }
-                    resolve({ success: true, filePath });
-                });
-
-                res.on('error', (err) => {
-                    fileStream.close();
-                    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                    reject(err.message);
-                });
-            });
-
-            activeDownloadReq = req;
-            req.on('error', (err) => {
-                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-                reject(err.message);
-            });
+        if (!gameName) {
+            throw new Error('Game name is required but was undefined or empty.');
         }
 
-        requestFile(downloadUrl);
+        const gameFolder = path.join(
+            app.getPath('documents'),
+            'Big Screen Launcher',
+            'Games',
+            gameName
+        );
+
+        let exeName = (game.exe || '').trim();
+
+        if (exeName && fs.existsSync(path.join(gameFolder, exeName))) {
+            exePath = path.join(gameFolder, exeName);
+        } else {
+            console.warn(`Saved exe "${exeName}" not found. Scanning ${gameFolder} for real executable...`);
+            const detectedExe = findExecutableInFolder(gameFolder, gameName);
+            exePath = path.join(gameFolder, detectedExe);
+
+            saveGameToLibrary({
+                ...game,
+                name: gameName,
+                exe: detectedExe,
+                path: exePath
+            });
+        }
+    }
+
+    if (!fs.existsSync(exePath) || !fs.statSync(exePath).isFile()) {
+        throw new Error(`Executable file not found at: ${exePath}`);
+    }
+
+    const errorMessage = await shell.openPath(exePath);
+    if (errorMessage) {
+        throw new Error(`Failed to launch process: ${errorMessage}`);
+    }
+
+    return { success: true };
+});
+
+// smart search
+const HELPER_EXE_PATTERNS = [
+    /unitycrashhandler/i,
+    /crashpad/i,
+    /crashreport/i,
+    /unins\d*/i,
+    /uninstall/i,
+    /setup/i,
+    /vcredist/i,
+    /dxsetup/i,
+    /dotnet/i,
+    /prereq/i,
+    /dependencies/i,
+    /config/i,
+    /updater/i
+];
+
+function findExecutableInFolder(folderPath, gameName) {
+    function getExecutables(dir, depth = 0) {
+        if (depth > 2) return [];
+        let results = [];
+
+        try {
+            const items = fs.readdirSync(dir);
+            for (const item of items) {
+                const fullPath = path.join(dir, item);
+                const stat = fs.statSync(fullPath);
+
+                if (stat.isDirectory()) {
+                    const lowerDir = item.toLowerCase();
+                    if (!['mono', 'engine', 'redist', 'support', 'directx'].includes(lowerDir)) {
+                        results = results.concat(getExecutables(fullPath, depth + 1));
+                    }
+                } else if (item.toLowerCase().endsWith('.exe')) {
+                    results.push(path.relative(folderPath, fullPath));
+                }
+            }
+        } catch (err) {
+            console.error('Error scanning folder for exes:', err);
+        }
+        return results;
+    }
+
+    const allExes = getExecutables(folderPath);
+    if (allExes.length === 0) return `${gameName}.exe`;
+
+    const validExes = allExes.filter(exeRelPath => {
+        const fileName = path.basename(exeRelPath);
+        return !HELPER_EXE_PATTERNS.some(pattern => pattern.test(fileName));
+    });
+
+    const candidates = validExes.length > 0 ? validExes : allExes;
+
+    if (candidates.length === 1) {
+        return candidates[0];
+    }
+
+    const cleanStr = str => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetName = cleanStr(gameName);
+
+    let bestExe = candidates[0];
+    let highestScore = -1;
+
+    for (const exeRelPath of candidates) {
+        const exeBaseName = path.basename(exeRelPath, '.exe');
+        const cleanExe = cleanStr(exeBaseName);
+
+        let score = 0;
+
+        if (cleanExe === targetName) {
+            score = 100;
+        } 
+        else if (targetName.includes(cleanExe) && cleanExe.length > 2) {
+            score = 50 + (cleanExe.length / targetName.length) * 30;
+        } else if (cleanExe.includes(targetName) && targetName.length > 2) {
+            score = 40 + (targetName.length / cleanExe.length) * 30;
+        } else {
+            const exeWords = exeBaseName.toLowerCase().split(/[^a-z0-9]+/);
+            const targetWords = gameName.toLowerCase().split(/[^a-z0-9]+/);
+            const matchingWords = exeWords.filter(w => w.length > 2 && targetWords.includes(w));
+            
+            if (matchingWords.length > 0) {
+                score = 20 + (matchingWords.length * 10);
+            }
+        }
+
+        if (!exeRelPath.includes(path.sep)) {
+            score += 5;
+        }
+
+        if (score > highestScore) {
+            highestScore = score;
+            bestExe = exeRelPath;
+        }
+    }
+
+    return bestExe;
+}
+
+function flattenIfSingleSubfolder(folderPath) {
+    const items = fs.readdirSync(folderPath);
+    if (items.length === 1) {
+        const subPath = path.join(folderPath, items[0]);
+        if (fs.statSync(subPath).isDirectory()) {
+            const subItems = fs.readdirSync(subPath);
+            subItems.forEach(item => {
+                fs.renameSync(path.join(subPath, item), path.join(folderPath, item));
+            });
+            fs.rmdirSync(subPath);
+        }
+    }
+}
+
+async function extractArchive(archivePath, destFolder) {
+    const fileBuffer = fs.readFileSync(archivePath);
+    const headerHex = fileBuffer.subarray(0, 7).toString('hex');
+
+    // Check for RAR magic bytes ("Rar!" -> 52617221)
+    if (headerHex.startsWith('52617221')) {
+        const extractor = await unrar.createExtractorFromData({ data: fileBuffer });
+        const extracted = extractor.extract({ files: () => true });
+
+        for (const fileData of extracted.files) {
+            const relativePath = fileData.fileHeader.name;
+            const fullPath = path.join(destFolder, relativePath);
+
+            if (fileData.fileHeader.flags.directory) {
+                fs.mkdirSync(fullPath, { recursive: true });
+            } else if (fileData.extraction) {
+                fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+                fs.writeFileSync(fullPath, Buffer.from(fileData.extraction));
+            }
+        }
+    } else {
+        // Fallback to ZIP extraction
+        const zip = new AdmZip(archivePath);
+        zip.extractAllTo(destFolder, true);
+    }
+}
+
+// start
+ipcMain.handle('start-download', async (event, payload) => {
+    const { gameName, downloadUrl, exeName, version, cover } = payload;
+
+    const gameFolder = path.join(
+        app.getPath('documents'),
+        'Big Screen Launcher',
+        'Games',
+        gameName
+    );
+    
+    fs.mkdirSync(gameFolder, { recursive: true });
+
+    const zipPath = path.join(gameFolder, 'download_temp.zip');
+    const fileStream = fs.createWriteStream(zipPath);
+    const client = downloadUrl.startsWith('https') ? https : http;
+
+    return new Promise((resolve, reject) => {
+        activeDownloadReq = client.get(downloadUrl, (response) => {
+            if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+                return ipcMain.handlers.get('start-download')(event, {
+                    ...payload,
+                    downloadUrl: response.headers.location
+                }).then(resolve).catch(reject);
+            }
+
+            if (response.statusCode !== 200) {
+                fs.unlink(zipPath, () => {});
+                return reject(new Error(`Server returned HTTP ${response.statusCode}`));
+            }
+
+            const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
+            let transferredBytes = 0;
+            let startTime = Date.now();
+
+            response.on('data', (chunk) => {
+                transferredBytes += chunk.length;
+                fileStream.write(chunk);
+
+                if (totalBytes > 0) {
+                    const percent = (transferredBytes / totalBytes) * 100;
+                    const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
+                    const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+                    
+                    const elapsedSec = (Date.now() - startTime) / 1000;
+                    const speedBytesPerSec = transferredBytes / elapsedSec;
+                    const remainingSec = Math.ceil((totalBytes - transferredBytes) / (speedBytesPerSec || 1));
+
+                    const mins = Math.floor(remainingSec / 60);
+                    const secs = remainingSec % 60;
+
+                    event.sender.send('download-progress', {
+                        status: 'downloading',
+                        gameName,
+                        percent,
+                        transferredMB,
+                        totalMB,
+                        etaStr: `${mins}m ${secs}s left`
+                    });
+                }
+            });
+
+            response.on('end', () => {
+                fileStream.end(async () => {
+                    try {
+                        // 1. Notify UI that extraction is starting
+                        event.sender.send('download-progress', {
+                            status: 'downloading',
+                            gameName,
+                            percent: 100,
+                            transferredMB: '',
+                            totalMB: '',
+                            etaStr: 'Extracting game files...'
+                        });
+
+                        // 2. Automatically extract .rar or .zip
+                        await extractArchive(zipPath, gameFolder);
+
+                        // 3. Clean up temporary archive file
+                        if (fs.existsSync(zipPath)) {
+                            fs.unlinkSync(zipPath);
+                        }
+
+                        // 4. Flatten directory if extracted into a single wrapper subfolder
+                        flattenIfSingleSubfolder(gameFolder);
+
+                        // 5. Detect executable
+                        let finalExeName = exeName;
+                        if (!finalExeName) {
+                            finalExeName = findExecutableInFolder(gameFolder, gameName);
+                        }
+
+                        // 6. Notify UI that artwork is being fetched
+                        event.sender.send('download-progress', {
+                            status: 'downloading',
+                            gameName,
+                            percent: 100,
+                            transferredMB: '',
+                            totalMB: '',
+                            etaStr: 'Fetching game artwork...'
+                        });
+
+                        // 7. Fetch SteamGridDB artwork automatically
+                        let gameCover = cover || "images/images.jpg";
+                        let gameHero = null;
+                        let gameLogo = null;
+
+                        try {
+                            const fetchedCover = await fetchGameArt(gameName);
+                            if (fetchedCover) gameCover = fetchedCover;
+
+                            gameHero = await fetchGameHero(gameName);
+                            gameLogo = await fetchGameLogo(gameName);
+                        } catch (artErr) {
+                            console.error("Failed to fetch artwork automatically:", artErr);
+                        }
+
+                        // 8. Register in library
+                        saveGameToLibrary({
+                            name: gameName,
+                            version: version || "1.0.0",
+                            cover: gameCover,
+                            hero: gameHero,
+                            logo: gameLogo,
+                            exe: finalExeName,
+                            path: path.join(gameFolder, finalExeName)
+                        });
+
+                        event.sender.send('download-progress', { status: 'completed', gameName });
+                        resolve({ success: true });
+                    } catch (extractErr) {
+                        console.error('Failed to extract archive:', extractErr);
+                        reject(new Error(`Extraction failed: ${extractErr.message}`));
+                    }
+                });
+            });
+
+            response.on('error', (err) => {
+                fileStream.end();
+                fs.unlink(zipPath, () => {});
+                reject(err);
+            });
+        });
+
+        activeDownloadReq.on('error', (err) => {
+            fileStream.end();
+            fs.unlink(zipPath, () => {});
+            reject(err);
+        });
     });
 });
 
-// cancel
-ipcMain.handle('stop-download', () => {
+// stop
+ipcMain.handle('stop-download', async (event) => {
     if (activeDownloadReq) {
         activeDownloadReq.destroy();
         activeDownloadReq = null;
+        event.sender.send('download-progress', { status: 'cancelled' });
+        return true;
     }
-    if (activeDownloadStream) {
-        activeDownloadStream.close();
-        activeDownloadStream = null;
+    return false;
+});
+
+// saving the games
+function saveGameToLibrary(newGameRecord) {
+    const libraryPath = path.join(
+        app.getPath('documents'),
+        'Big Screen Launcher',
+        'Games',
+        '.games.json'
+    );
+
+    let library = [];
+
+    if (fs.existsSync(libraryPath)) {
+        try {
+            const raw = fs.readFileSync(libraryPath, 'utf8');
+            const parsed = JSON.parse(raw);
+            library = Array.isArray(parsed) ? parsed : (parsed.games || []);
+        } catch (err) {
+            console.error("Error parsing existing .games.json:", err);
+        }
     }
-    if (activeDownloadPath && fs.existsSync(activeDownloadPath)) {
-        try { fs.unlinkSync(activeDownloadPath); } catch (e) {}
+
+    const index = library.findIndex(g => 
+        (g.name || g.title || "").toLowerCase() === newGameRecord.name.toLowerCase()
+    );
+
+    if (index !== -1) {
+        library[index] = { ...library[index], ...newGameRecord };
+    } else {
+        library.push(newGameRecord);
     }
-    if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('download-progress', { status: 'cancelled' });
+
+    fs.mkdirSync(path.dirname(libraryPath), { recursive: true });
+    fs.writeFileSync(libraryPath, JSON.stringify(library, null, 2), 'utf8');
+}
+
+// get games
+ipcMain.handle('get-installed-games', async () => {
+    try {
+        const libraryPath = path.join(
+            app.getPath('documents'),
+            'Big Screen Launcher',
+            'Games',
+            '.games.json'
+        );
+
+        if (!fs.existsSync(libraryPath)) {
+            return [];
+        }
+
+        const data = fs.readFileSync(libraryPath, 'utf8');
+        const parsed = JSON.parse(data);
+
+        return Array.isArray(parsed) ? parsed : (parsed.games || []);
+    } catch (error) {
+        console.error("Error reading local .games.json:", error);
+        return [];
     }
-    return true;
 });
