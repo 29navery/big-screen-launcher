@@ -807,7 +807,7 @@ img.grid-item {
 /* da funky songs */
 
 .song-item {
-    width: 100%;
+    width: 650px;
     height: 60px;
     max-width: 106%;
     overflow: hidden;
@@ -844,17 +844,11 @@ img.grid-item {
 .song-item-title {
     color: #fff;
     font-size: 18px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-wrap-mode: nowrap;
 }
 
 .song-item-artist {
     color: #aaa;
     font-size: 15px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-wrap-mode: nowrap;
 }
 
 .song-item-length {
@@ -1000,7 +994,13 @@ img.grid-item {
     font-weight: 300;
     margin-top: 0;
     color: #aaa;
+    
+    white-space: nowrap;
+    
     overflow: hidden;
     text-overflow: ellipsis;
     text-wrap-mode: nowrap;
+
+    width: 100%;
+    text-align: right;
 }

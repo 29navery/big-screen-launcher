@@ -377,7 +377,7 @@ async function renderView() {
             songItem.classList.add('song-item');
             songItem.innerHTML = `
                 <img src="${song.cover}" width="40" height="40" style="border-radius:4px; object-fit: cover;">
-                <div style="flex-grow:1; margin-left:15px;">
+                <div style="flex-grow: 1; margin-left:15px;">
                     <p class="song-item-title" style="margin:0; font-weight:bold;">${song.title}</p>
                     <p class="song-item-artist" style="margin:0; color:#aaa; font-size:12px;">${song.artist}</p>
                 </div>
