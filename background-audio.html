@@ -1,165 +1,52 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>Big Screen Launcher</title>
-    <script>
-        const { ipcRenderer } = require('electron');
-        
-        const player = new Audio();
-        let queue = [];
-        let currentIndex = -1;
-        let currentMetadata = {
-            title: 'Song Title',
-            artist: 'Song Artist',
-            cover: 'images/album-cover-placeholder.jpg'
-        };
+    <head>
+        <title>iPod</title>
+        <link rel="stylesheet" href="stylesheets/iPod.css">
+    </head>
+    <body style="display: flex; align-content: center; justify-content: center; justify-items: center; align-content: center;">
+        <div id="ipod">
+            <img src="images/iPod-Frame.png" style="z-index: 5; width: 300px; -webkit-user-drag: none; -webkit-app-region: drag; pointer-events: none;">
+            <div id="ipod-screen">
+                <div style="width: 100%; border-bottom: 1.3px solid #757677;">
+                    <div id="topbar">
+                        <p id="ipod-time">9:42 AM</p>
+                        <p id="ipod-artist">Taylor Swift</p>
+                        <p id="ipod-title">The Fate of Ophelia</p>
+                    </div>
+                </div>
+                <img id="miniplayer-img" src="images/The Fate of Ophelia cover.jpg">
+                <div id="ipod-bottom-bar">
+                    <p id="seek-time">1:00</p>
+                    <div id="progress-bar"><div id="progress"></div> </div>
+                    <p id="seek-remaining">-3:46</p>
+                </div>
+            </div>
 
-        function formatUri(filePath) {
-            if (!filePath) return '';
-            if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('file://') || filePath.startsWith('data:')) {
-                return filePath;
-            }
-            if (!filePath.includes(':') && !filePath.startsWith('/') && !filePath.startsWith('\\')) {
-                return filePath;
-            }
-            const sanitized = filePath.replace(/\\/g, '/');
-            return sanitized.startsWith('/') ? `file://${sanitized}` : `file:///${sanitized}`;
-        }
-
-        if ('mediaSession' in navigator) {
-            navigator.mediaSession.setActionHandler('play', () => {
-                player.play().catch(err => console.error("Audio resume error:", err));
-                sendStatus();
-            });
-            navigator.mediaSession.setActionHandler('pause', () => {
-                player.pause();
-                sendStatus();
-            });
-            navigator.mediaSession.setActionHandler('previoustrack', () => {
-                handlePrev();
-            });
-            navigator.mediaSession.setActionHandler('nexttrack', () => {
-                handleNext();
-            });
-        }
-
-        function handleNext() {
-            if (queue.length > 0 && currentIndex < queue.length - 1) {
-                playTrackAtIndex(currentIndex + 1);
-            }
-        }
-
-        function handlePrev() {
-            if (player.currentTime > 3) {
-                player.currentTime = 0;
-            } else if (queue.length > 0 && currentIndex > 0) {
-                playTrackAtIndex(currentIndex - 1);
-            }
-        }
-
-        function playTrackAtIndex(index) {
-            if (index < 0 || index >= queue.length) return;
-            currentIndex = index;
-            const track = queue[currentIndex];
-            const trackUrl = track.path || track.trackUrl;
-            if (trackUrl) {
-                player.src = formatUri(trackUrl);
-            }
-            currentMetadata = {
-                title: track.title || 'Unknown Song',
-                artist: track.artist || 'Unknown Artist',
-                cover: track.cover ? formatUri(track.cover) : 'images/album-cover-placeholder.jpg'
-            };
-            document.title = `${currentMetadata.title} - ${currentMetadata.artist}`;
-
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.metadata = new MediaMetadata({
-                    title: currentMetadata.title,
-                    artist: currentMetadata.artist,
-                    artwork: [
-                        { src: formatUri(currentMetadata.cover), sizes: '512x512', type: 'image/png' }
-                    ]
-                });
-            }
-
-            player.play().catch(err => console.error("Audio playback error:", err));
-            sendStatus();
-        }
-
-        // Send active status update
-        function sendStatus() {
-            const isPlaying = !player.paused;
-
-            if ('mediaSession' in navigator) {
-                navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
-            }
-
-            const statusPayload = {
-                currentTime: player.currentTime || 0,
-                duration: player.duration || 0,
-                isPlaying: isPlaying,
-                title: currentMetadata.title,
-                artist: currentMetadata.artist,
-                cover: currentMetadata.cover
-            };
-
-            ipcRenderer.send('send-audio-status', statusPayload);
-        }
-
-        ipcRenderer.on('receive-audio-command', (event, data) => {
-            if (data.action === 'play') {
-                if (data.queue && Array.isArray(data.queue)) {
-                    queue = data.queue;
-                    currentIndex = data.index !== undefined ? data.index : 0;
-                    playTrackAtIndex(currentIndex);
-                } else {
-                    queue = [{
-                        path: data.trackUrl,
-                        title: data.title,
-                        artist: data.artist,
-                        cover: data.cover
-                    }];
-                    currentIndex = 0;
-                    playTrackAtIndex(0);
-                }
-            } else if (data.action === 'pause') {
-                player.pause();
-                sendStatus();
-            } else if (data.action === 'resume') {
-                player.play().catch(err => console.error("Audio resume error:", err));
-                sendStatus();
-            } else if (data.action === 'toggle') {
-                if (player.paused) {
-                    player.play().catch(err => console.error("Audio resume error:", err));
-                } else {
-                    player.pause();
-                }
-                sendStatus();
-            } else if (data.action === 'next') {
-                handleNext();
-            } else if (data.action === 'prev') {
-                handlePrev();
-            }
-        });
-
-        player.addEventListener('timeupdate', sendStatus);
-
-        player.addEventListener('ended', () => {
-            if (queue.length > 0 && currentIndex < queue.length - 1) {
-                playTrackAtIndex(currentIndex + 1);
-            } else {
-                document.title = 'Big Screen Launcher';
-                if ('mediaSession' in navigator) {
-                    navigator.mediaSession.playbackState = 'none';
-                }
-                ipcRenderer.send('send-audio-status', { ended: true });
-            }
-        });
-
-        ipcRenderer.on('request-audio-status', () => {
-            sendStatus();
-        });
-    </script>
-</head>
-<body></body>
+            <button id="pause-button"></button>
+            <button id="skip-button"></button>
+            <button id="back-button"></button>
+        </div>
+    </body>
 </html>
+
+<script src="javascript/background-audio.js"></script>
+<script>
+    function updateClock() {
+        const now = new Date();
+        let hr = now.getHours();
+        let min = now.getMinutes();
+        let stamp = ' AM'
+        if (now.getHours() > 12) {
+            hr = now.getHours() - 12;
+            stamp = ' PM';
+        }
+        if (now.getMinutes() < 10) {
+            min = '0' + '' + now.getMinutes();
+        }
+        document.getElementById('ipod-time').textContent = hr + ":" + min + stamp;
+    }
+
+    updateClock();
+    setInterval(updateClock, 500);
+</script>

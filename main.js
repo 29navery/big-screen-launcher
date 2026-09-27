@@ -48,8 +48,13 @@ app.whenReady().then(() => {
     createWindow();
 
     audioWindow = new BrowserWindow({
-        show: false,
+        width: 366,
+        height: 477,
+        resizable: false,
+        show: true,
         title: 'Big Screen Launcher',
+        transparent: true,
+        frame: false,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,

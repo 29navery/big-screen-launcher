@@ -844,11 +844,17 @@ img.grid-item {
 .song-item-title {
     color: #fff;
     font-size: 18px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap-mode: nowrap;
 }
 
 .song-item-artist {
     color: #aaa;
     font-size: 15px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap-mode: nowrap;
 }
 
 .song-item-length {
@@ -974,4 +980,27 @@ img.grid-item {
     height: 100%;
     background: linear-gradient(to left, transparent, var(--bg-color));
     pointer-events: none;
+}
+
+#miniplayer-title {
+    font-weight: 400;
+    margin-bottom: 2px;
+
+    white-space: nowrap;
+    
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap-mode: nowrap;
+
+    width: 100%;
+    text-align: right;
+}
+
+#miniplayer-artist {
+    font-weight: 300;
+    margin-top: 0;
+    color: #aaa;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap-mode: nowrap;
 }

@@ -234,7 +234,7 @@ function sanitizeFolder(name) {
     return name ? name.replace(/[<>:"/\\|?*]/g, '_').trim() : null;
 }
 
-// Add songs to playlist
+// add songs to playlist
 async function addSongsToCurrentPlaylist() {
     if (!currentPlaylist) return;
 

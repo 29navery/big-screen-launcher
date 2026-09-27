@@ -175,6 +175,7 @@ function muteHexColor(hex, alpha = 0.5) {
 const refreshButton = document.getElementById('refresh-button');
 
 if (refreshButton) {
+    ipcRenderer.invoke('clear-games-cache');
     refreshButton.addEventListener('click', async () => {
         localStorage.removeItem('tungsten_games_cache');
         const success = await ipcRenderer.invoke('clear-games-cache');
