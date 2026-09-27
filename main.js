@@ -141,6 +141,11 @@ app.on('window-all-closed', () => {
     }
 });
 
+app.setLoginItemSettings({
+    openAtLogin: false,
+    openAsHidden: true
+});
+
 // Shortcuts & Dialog Handlers
 ipcMain.handle('dialog:open-game-file', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
