@@ -1,5 +1,6 @@
 // hello I am the electron script
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
 
@@ -8,6 +9,12 @@ let mainWindow;
 let audioWindow;
 let tray = null;
 let isQuitting = false;
+
+autoUpdater.autoDownload = true;
+ipcMain.on('restart-app', () => {
+    app.relaunch();
+    app.exit(0);
+});
 
 const createWindow = () => {
     mainWindow = new BrowserWindow({

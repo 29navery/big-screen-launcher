@@ -1,3 +1,4 @@
+const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
@@ -61,7 +62,7 @@ checkUpdates();
 const updateButton = document.getElementById('update-install-button');
 if (updateButton) {
     updateButton.addEventListener("click", function(event) {
-        window.open("https://tungstenball.org/downloads", "_blank");
+        ipcMain.invoke('restart-app');
     });
 }
 

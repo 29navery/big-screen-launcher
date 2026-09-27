@@ -1,6 +1,5 @@
 {
   "name": "big-screen-launcher",
-  "productName": "Big Screen Launcher",
   "description": "The better Steam!",
   "author": "nicky_lul",
   "version": "26.0.0",
@@ -12,6 +11,14 @@
   },
   "build": {
     "appId": "com.nickylul.BSL",
+    "productName": "Big Screen Launcher",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "29navery",
+        "repo": "BSL-2"
+      }
+    ],
     "win": {
       "icon": "assets/app-icon.ico"
     },
@@ -28,6 +35,7 @@
   },
   "dependencies": {
     "@eirslett/shoeset": "^0.0.1",
-    "music-metadata": "^11.16.0"
+    "electron-updater": "^6.8.9",
+    "music-metadata": "^11.16.1"
   }
 }
