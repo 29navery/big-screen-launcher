@@ -19,14 +19,14 @@ ipcMain.on('restart-app', () => {
 const createWindow = () => {
     mainWindow = new BrowserWindow({
         width: 1200,
-        height: 800,
+        height: 720,
         minWidth: 800,
-        minHeight: 800,
+        minHeight: 600,
         titleBarStyle: 'hidden',
         titleBarOverlay: {
-            color: '#1e1e1e',
+            color: '#131314',
             symbolColor: '#ffffff',
-            height: 35
+            height: 45
         },
         webPreferences: {
             nodeIntegration: true,

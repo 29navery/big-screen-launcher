@@ -36,22 +36,32 @@
                 </div>
                 <div class="settings-section">
                     <h2>SteamGridDB</h2>
-                    <p>API Key</p>
-                    <input type="text" id="sgdb-api-key-input" style="height: 24px; border-radius: 8px;">
-                    <button id="save-settings-btn" class="normal-button" style="padding: 0 60px;">Save Key</button>
+                    <div id="sgdb-content" class="section-content">
+                        <p>API Key</p>
+                        <input type="text" id="sgdb-api-key-input" style="height: 24px; border-radius: 8px;">
+                        <button id="save-settings-btn" class="normal-button" style="padding: 0 60px;">Save Key</button>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <h2>Big Screen Launcher</h2>
-                    <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
-                        <input type="checkbox">
-                        <p>Start with Windows</p>
+                    <div id="bsl-content" class="section-content">
+                        <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
+                            <input type="checkbox">
+                            <p>Start with Windows</p>
+                        </div>
                     </div>
                 </div>
                 <div class="settings-section">
                     <h2>Music Player</h2>
-                    <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
-                        <input type="checkbox">
-                        <p>Show iPod on startup</p>
+                    <div id="music-player-content" class="section-content">
+                        <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
+                            <input id="show-ipod-automatically" type="checkbox">
+                            <p>Show iPod automatically</p>
+                        </div>
+                        <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
+                            <input id="keep-ipod-front" type="checkbox">
+                            <p>Keep iPod on top</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -61,3 +71,19 @@
 
 <script type="module" src="javascript/settings.js"></script>
 <script src="script.js"></script>
+
+<script>
+    document.addEventListener('click', (event) => {
+        const h2 = event.target.closest('h2');
+        if (!h2) return;
+
+        let targetDiv = h2.nextElementSibling;
+        if (targetDiv && targetDiv.matches('#sgdb-content, #bsl-content, #music-player-content')) {
+            if (targetDiv.style.display === 'none') {
+                targetDiv.style.setProperty('display', 'block');
+            } else {
+                targetDiv.style.setProperty('display', 'none');
+            }
+        }
+    });
+</script>

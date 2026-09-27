@@ -2,19 +2,6 @@ const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 
-// display directories
-const directoriesDiv = document.getElementById("directory-list");
-let gameDirectories = ['C:/Users/User/Documents/Big Screen Launcher/Games']
-
-if (directoriesDiv) {
-    for (let i = 0; i < gameDirectories.length; i++) {
-        const newItem = document.createElement("div");
-        directoriesDiv.appendChild(newItem);
-        newItem.textContent = gameDirectories[i];
-        newItem.classList.add("game-folder-item");
-    }
-}
-
 // spooky ahh version shit
 async function getLatestVersion() {
     try {

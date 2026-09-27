@@ -627,6 +627,14 @@ img.grid-item {
     padding-bottom: 18px;
 }
 
+.settings-section h2 {
+    cursor: pointer;
+}
+
+.section-content {
+    display: block;
+}
+
 .settings-section input {
     background-color: #0003;
     width: 95%;
