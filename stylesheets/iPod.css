@@ -189,13 +189,13 @@ button {
     left: 0;
     top: 0;
 
-    transform: translate(calc(calc(134 + var(--button-offset-x)) * 1px), calc(calc(295 + var(--button-offset-y)) * 1px));
-    height: 25px;
-    width: 36px;
+    transform: translate(calc(calc(128 + var(--button-offset-x)) * 1px), calc(calc(287 + var(--button-offset-y)) * 1px));
+    height: 35px;
+    width: 45px;
 
     cursor: pointer;
     border: 0;
-    background-color: rgba(0, 0, 0, var(--button-transparency));
+    background-color: rgba(255, 0, 0, var(--button-transparency));
 }
 
 #pause-button {
@@ -203,13 +203,13 @@ button {
     left: 0;
     top: 0;
 
-    transform: translate(calc(calc(134 + var(--button-offset-x)) * 1px), calc(calc(393 + var(--button-offset-y)) * 1px));
-    height: 25px;
-    width: 30px;
+    transform: translate(calc(calc(128 + var(--button-offset-x)) * 1px), calc(calc(388 + var(--button-offset-y)) * 1px));
+    height: 35px;
+    width: 45px;
 
     cursor: pointer;
     border: 0;
-    background-color: rgba(0, 0, 0, var(--button-transparency));
+    background-color: rgba(255, 0, 0, var(--button-transparency));
 }
 
 #skip-button {
@@ -217,13 +217,13 @@ button {
     left: 0;
     top: 0;
 
-    transform: translate(calc(calc(184 + var(--button-offset-x)) * 1px), calc(calc(341 + var(--button-offset-y)) * 1px));
-    height: 25px;
-    width: 30px;
+    transform: translate(calc(calc(176 + var(--button-offset-x)) * 1px), calc(calc(341 + var(--button-offset-y)) * 1px));
+    height: 35px;
+    width: 45px;
 
     cursor: pointer;
     border: 0;
-    background-color: rgba(0, 0, 0, var(--button-transparency));
+    background-color: rgba(255, 0, 0, var(--button-transparency));
 }
 
 #back-button {
@@ -231,13 +231,13 @@ button {
     left: 0;
     top: 0;
 
-    transform: translate(calc(calc(85 + var(--button-offset-x)) * 1px), calc(calc(341 + var(--button-offset-y)) * 1px));
-    height: 25px;
-    width: 30px;
+    transform: translate(calc(calc(78 + var(--button-offset-x)) * 1px), calc(calc(341 + var(--button-offset-y)) * 1px));
+    height: 35px;
+    width: 45px;
 
     cursor: pointer;
     border: 0;
-    background-color: rgba(0, 0, 0, var(--button-transparency));
+    background-color: rgba(255, 0, 0, var(--button-transparency));
 }
 
 /* Progress Bar */

@@ -208,12 +208,17 @@ ipcRenderer.on('request-audio-status', () => {
 
 // buttons
 document.getElementById('menu-button').addEventListener('click', () => {
-    if (document.getElementById('miniplayer-img').style.display !== 'flex') {
-        document.getElementById('miniplayer-img').style.setProperty('display', 'flex');
-        document.getElementById('lyrics-screen').style.setProperty('display', 'none');
+    const img = document.getElementById('miniplayer-img');
+    const lyrics = document.getElementById('lyrics-container');
+
+    const isImgVisible = window.getComputedStyle(img).display !== 'none';
+
+    if (isImgVisible) {
+        img.style.display = 'none';
+        lyrics.style.display = 'flex';
     } else {
-        document.getElementById('miniplayer-img').style.setProperty('display', 'none');
-        document.getElementById('lyrics-screen').style.setProperty('display', 'block');
+        img.style.display = 'block';
+        lyrics.style.display = 'none';
     }
 });
 document.getElementById('pause-button').addEventListener('click', () => {
