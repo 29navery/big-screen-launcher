@@ -22,13 +22,13 @@ async function initGamePage() {
     const heroImage = document.querySelector('.hero-image');
     if (heroImage) {
         if (game.hero) {
-            heroImage.setAttribute('src', game.hero);
+            heroImage.style.setProperty('background-image', 'url(' + game.hero + ')', 'important');
         } else {
             console.log("Fetching wide hero banner for:", game.name);
             const heroUrl = await ipcRenderer.invoke('fetch-game-hero', game.name);
             if (heroUrl) {
                 game.hero = heroUrl;
-                heroImage.setAttribute('src', heroUrl);
+                heroImage.style.setProperty('background-image', 'url(' + game.hero + ')', 'important');
                 needsSave = true;
             }
         }
