@@ -1,3 +1,5 @@
+// main code
+
 async function initGamePage() {
     const urlParams = new URLSearchParams(window.location.search);
     const gameIndex = urlParams.get('index');
@@ -64,3 +66,37 @@ async function initGamePage() {
 }
 
 document.addEventListener('DOMContentLoaded', initGamePage);
+
+// buttons
+
+const favorite = document.getElementById('favorite-button')
+const remove = document.getElementById('remove-button');
+
+const deleteYes = document.getElementById('deletion-prompt-yes');
+const deleteNo = document.getElementById('deletion-prompt-no');
+
+const deleteCover = document.getElementById('deletion-prompt-cover');
+
+remove.addEventListener('click', () => {
+    deleteCover.style.setProperty('display', 'block');
+
+    deleteNo.addEventListener('click', () => {
+        deleteCover.style.setProperty('display', 'none');
+    });
+
+    deleteYes.addEventListener('click', () => {
+        deleteCover.style.setProperty('display', 'none');
+    });
+});
+
+favorite.addEventListener('click', () => {
+    const img = favorite.querySelector('img');
+
+    if (img.src.endsWith('svg/heart.svg')) {
+        img.src = 'svg/heart-filled.svg';
+    } else {
+        img.src = 'svg/heart.svg';
+    }
+
+    
+});

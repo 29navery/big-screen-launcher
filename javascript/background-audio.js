@@ -235,7 +235,7 @@ document.getElementById('back-button').addEventListener('click', () => {
 });
 
 setInterval(updateDisplay, 500);
-player.volume = 0.2;
+player.volume = 0.4;
 
 const progressBar = document.getElementById('progress-bar');
 
