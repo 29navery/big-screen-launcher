@@ -22,35 +22,39 @@
             </nav>
             <div id="content" style="padding-bottom: 20px; display: flex; flex-direction: column; gap: 20px;">
                 <h1 style="text-indent:25px;">Settings</h1>
+                
                 <div id="update-prompt" style="display: none;" class="settings-section">
                     <h2>Update available!</h2>
                     <p id="update-version-text">Latest Version: . . .</p>
                     <button id="update-install-button" class="preferable-button">Install now</button>
                     <button class="normal-button">Changelog</button>
                 </div>
+
                 <div class="settings-section">
                     <h2>Themes</h2>
                     <p></p>
                     <div id="directory-list"></div>
                     <button class="preferable-button">Import Theme</button>
                 </div>
+
                 <div class="settings-section">
                     <h2>SteamGridDB</h2>
                     <div id="sgdb-content" class="section-content">
                         <p>API Key</p>
                         <input type="text" id="sgdb-api-key-input" style="height: 24px; border-radius: 8px;">
-                        <button id="save-settings-btn" class="normal-button" style="padding: 0 60px;">Save Key</button>
                     </div>
                 </div>
+
                 <div class="settings-section">
                     <h2>Big Screen Launcher</h2>
                     <div id="bsl-content" class="section-content">
                         <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
-                            <input type="checkbox">
+                            <input id="start-with-windows" type="checkbox">
                             <p>Start with Windows</p>
                         </div>
                     </div>
                 </div>
+
                 <div class="settings-section">
                     <h2>Music Player</h2>
                     <div id="music-player-content" class="section-content">

@@ -153,7 +153,9 @@ app.setLoginItemSettings({
     openAsHidden: true
 });
 
-// Shortcuts & Dialog Handlers
+
+
+// shortcuts & dialog handlers
 ipcMain.handle('dialog:open-game-file', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
         title: 'Select Game Executable',
@@ -186,6 +188,8 @@ ipcMain.handle('get-user-data-path', () => {
     return app.getPath('userData');
 });
 
+
+
 let appVersion = '26.0';
 try {
     const versionPath = path.join(__dirname, 'appversion.txt');
@@ -196,8 +200,15 @@ try {
 
 ipcMain.handle('get-app-version', () => appVersion);
 
-// User Data & Game Management
-const gamesDir = path.join(app.getPath('documents'), 'Big Screen Launcher', 'Games');
+
+
+// user data
+const bslDir = path.join(app.getPath('documents'), 'Big Screen Launcher');
+if (!fs.existsSync(bslDir)) {
+    fs.mkdirSync(bslDir, { recursive: true });
+}
+
+const gamesDir = path.join(bslDir, 'Games');
 if (!fs.existsSync(gamesDir)) {
     fs.mkdirSync(gamesDir, { recursive: true });
 }
@@ -224,7 +235,8 @@ ipcMain.handle('save-games', (event, gamesArray) => {
     }
 });
 
-const settingsFilePath = path.join(app.getPath('userData'), 'settings.json');
+
+const settingsFilePath = path.join(bslDir, '.settings.json');
 
 ipcMain.handle('load-settings', () => {
     try {
@@ -239,6 +251,9 @@ ipcMain.handle('load-settings', () => {
 
 ipcMain.handle('save-settings', (event, settingsData) => {
     try {
+        if (!fs.existsSync(bslDir)) {
+            fs.mkdirSync(bslDir, { recursive: true });
+        }
         fs.writeFileSync(settingsFilePath, JSON.stringify(settingsData, null, 2), 'utf8');
         return true;
     } catch (err) {
@@ -250,11 +265,17 @@ ipcMain.handle('save-settings', (event, settingsData) => {
 const DEFAULT_API_KEY = '9d1906739a2fb8b80908934fa3529734';
 function getApiKey() {
     if (fs.existsSync(settingsFilePath)) {
-        const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
-        if (settings.apiKey) return settings.apiKey;
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
+            if (settings.apiKey) return settings.apiKey;
+        } catch (err) {
+            console.error("Error reading settings file:", err);
+        }
     }
     return DEFAULT_API_KEY;
 }
+
+
 
 // get the arts
 async function fetchGameArt(gameName) {
@@ -327,6 +348,8 @@ ipcMain.handle('fetch-game-art', (event, gameName) => fetchGameArt(gameName));
 ipcMain.handle('fetch-game-hero', (event, gameName) => fetchGameHero(gameName));
 ipcMain.handle('fetch-game-logo', (event, gameName) => fetchGameLogo(gameName));
 
+
+
 // clear game list cache
 ipcMain.handle('clear-games-cache', async () => {
     try {
@@ -340,6 +363,8 @@ ipcMain.handle('clear-games-cache', async () => {
         return false;
     }
 });
+
+
 
 // remove games
 ipcMain.handle('remove-game', async (event, index) => {
@@ -388,9 +413,10 @@ ipcMain.handle('extract-mp3-metadata', async (event, filePath) => {
 });
 
 function hasIpcHandler(channel) {
-  // ipcMain._invokeHandlers is a Map holding active handle() channels
   return ipcMain._invokeHandlers instanceof Map && ipcMain._invokeHandlers.has(channel);
 }
+
+
 
 // download da shyt
 
@@ -453,6 +479,8 @@ ipcMain.handle('launch-game-process', async (event, game) => {
 
     return { success: true };
 });
+
+
 
 // smart search
 const HELPER_EXE_PATTERNS = [
@@ -571,7 +599,6 @@ async function extractArchive(archivePath, destFolder) {
     const fileBuffer = fs.readFileSync(archivePath);
     const headerHex = fileBuffer.subarray(0, 7).toString('hex');
 
-    // Check for RAR magic bytes ("Rar!" -> 52617221)
     if (headerHex.startsWith('52617221')) {
         const extractor = await unrar.createExtractorFromData({ data: fileBuffer });
         const extracted = extractor.extract({ files: () => true });
@@ -588,11 +615,12 @@ async function extractArchive(archivePath, destFolder) {
             }
         }
     } else {
-        // Fallback to ZIP extraction
         const zip = new AdmZip(archivePath);
         zip.extractAllTo(destFolder, true);
     }
 }
+
+
 
 // start
 ipcMain.handle('start-download', async (event, payload) => {
@@ -746,6 +774,8 @@ ipcMain.handle('start-download', async (event, payload) => {
     });
 });
 
+
+
 // stop
 ipcMain.handle('stop-download', async (event) => {
     if (activeDownloadReq) {
@@ -756,6 +786,8 @@ ipcMain.handle('stop-download', async (event) => {
     }
     return false;
 });
+
+
 
 // saving the games
 function saveGameToLibrary(newGameRecord) {
@@ -791,6 +823,8 @@ function saveGameToLibrary(newGameRecord) {
     fs.mkdirSync(path.dirname(libraryPath), { recursive: true });
     fs.writeFileSync(libraryPath, JSON.stringify(library, null, 2), 'utf8');
 }
+
+
 
 // get games
 ipcMain.handle('get-installed-games', async () => {
