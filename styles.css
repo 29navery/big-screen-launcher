@@ -623,7 +623,7 @@ img.grid-item {
     border: 1px solid #fff2;
     width: 600px;
     max-width: 80%;
-    margin: 0 auto;
+    margin: 12px auto;
     padding-bottom: 18px;
 }
 
@@ -1006,28 +1006,6 @@ input[type='checkbox']:disabled {
     animation-duration: 3s;
     animation-timing-function: linear;
     animation-iteration-count: infinite;
-}
-
-  /*                       */
- /*      TRASH BUTTON     */
-/*                       */
-
-.trashContainer {
-    margin-right: 8px;
-    height: 48px;
-    width: 48px;
-    display: none;
-    border-radius: 100%;
-    background-color: #9995;
-    justify-content: center;
-    justify-items: center;
-    align-content: center;
-    justify-items: center;
-}
-
-.trashContainer img {
-    margin: auto;
-    pointer-events: none;
 }
 
   /*                     */
