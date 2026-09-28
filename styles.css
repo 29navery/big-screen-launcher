@@ -206,6 +206,9 @@ nav button:hover {
 .logo-image {
     z-index: 2;
     height: 80%;
+    width: auto;
+    object-fit: contain;
+    max-width: 27%;
     user-select: none;
     -webkit-user-drag: none;
 }
@@ -231,14 +234,60 @@ nav button:hover {
     margin-top: 12px;
 }
 
-.play-partition {
+.options-partition {
     position: absolute;
-    background-color: var(--rail-color);
-    height: 34.5px;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+
+    height: 44px;
     right: 0;
-    width: 75.9%;
-    margin-top: -42px;
-    border-radius: 8px;
+    left: 231px;
+
+    margin-top: -50px;
+}
+
+.game-options-divider {
+    background-color: var(--rail-color);
+    height: 100%;
+    border-radius: 6px;
+
+    width: 50%;
+    flex: 1;
+}
+
+.game-options-button {
+    background-color: var(--rail-color);
+    height: 100%;
+    width: 44px;
+
+    border-radius: 6px;
+    border: 0;
+    color: #fff;
+
+    cursor: pointer;
+    transition: all 100ms;
+}
+
+.game-options-button:hover {
+    transform: scale(1.025);
+    box-shadow: #0003 0 0 6px;
+}
+
+.options-partition button {
+    padding: 6px;
+    display: flex;
+    
+    align-items: center;
+    justify-content: center;
+}
+
+.options-partition button img {
+    width: 70%;
+
+    aspect-ratio: 1/1;
+
+    pointer-events: none;
 }
 
   /*                       */
@@ -251,7 +300,7 @@ nav button:hover {
     height: fit-content;
     padding: 8px;
     margin-left: 15px;
-    margin-top: -25px;
+    margin-top: -18px;
     border-radius: 13px;
 }
 
@@ -260,14 +309,18 @@ nav button:hover {
     background-color: rgb(61, 177, 31);
     font-size: 19px;
     color: #fff;
+
     border: 1px solid #fff5;
     padding: 0 20px;
     height: 60px;
+
     cursor: pointer;
-    width: 180px;
+    width: 200px;
+
     justify-content: center;
     align-content: center;
     text-decoration: none;
+
     transition: all 200ms;
 }
 
