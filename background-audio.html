@@ -8,7 +8,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
     </head>
-    <body style="display: flex; align-content: center; justify-content: center; justify-items: center; align-content: center;">
+    <body style="display: flex; align-content: center; justify-content: center; justify-items: center;">
         <div id="ipod">
             <img src="images/iPod-Frame.png" style="z-index: 5; width: 300px; -webkit-user-drag: none; -webkit-app-region: drag; pointer-events: none;">
             <div id="ipod-screen">
@@ -21,13 +21,8 @@
                 </div>
 
                 <img id="miniplayer-img" src="images/The Fate of Ophelia cover.jpg">
-                <div id="lyrics-container">
-                    <p class="lyric-line">Lyrics 1</p>
-                    <p class="lyric-line.active">Lyrics 2</p>
-                    <p class="lyric-line">Lyrics 3</p>
-                    <p class="lyric-line">Lyrics 4</p>
-                    <p class="lyric-line">Lyrics 5</p>
-                </div>
+                
+                <div id="lyrics-container"></div>
 
                 <div id="ipod-bottom-bar">
                     <p id="seek-time">1:00</p>
@@ -36,10 +31,10 @@
                 </div>
             </div>
 
-            <button id="menu-button"></button>
-            <button id="pause-button"></button>
-            <button id="skip-button"></button>
-            <button id="back-button"></button>
+            <button id="menu-button" tabindex="-1"></button>
+            <button id="pause-button" tabindex="-1"></button>
+            <button id="skip-button" tabindex="-1"></button>
+            <button id="back-button" tabindex="-1"></button>
         </div>
     </body>
 </html>
@@ -50,13 +45,13 @@
         const now = new Date();
         let hr = now.getHours();
         let min = now.getMinutes();
-        let stamp = ' AM'
+        let stamp = ' AM';
         if (now.getHours() > 12) {
             hr = now.getHours() - 12;
             stamp = ' PM';
         }
         if (now.getMinutes() < 10) {
-            min = '0' + '' + now.getMinutes();
+            min = '0' + now.getMinutes();
         }
         document.getElementById('ipod-time').textContent = hr + ":" + min + stamp;
     }
