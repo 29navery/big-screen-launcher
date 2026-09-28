@@ -204,37 +204,79 @@ nav button:hover {
 /*            */
 
 .logo-image {
-    position: absolute;
     z-index: 2;
-    width: 27%;
-    left: 5%;
-    top: 10%;
+    height: 80%;
     user-select: none;
     -webkit-user-drag: none;
-}
-
-.hero-container {
-    position: relative;
-    width: 100%;
-    height: fit-content;
 }
 
 .hero-image {
-    width: 100%;
-    height: auto;
-    display: block;
-    user-select: none;
-    -webkit-user-drag: none;
+    background-image: url('images/hero.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border-radius: 8px
 }
 
-.hero-container::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to bottom, transparent 50%, var(--bg-color));
-    pointer-events: none;
-    z-index: 1;
+.top-area-image {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3.1/1;
+    max-height: 300px;
+    margin-top: 12px;
 }
+
+.play-partition {
+    position: absolute;
+    background-color: var(--rail-color);
+    height: 34.5px;
+    right: 0;
+    width: 75.9%;
+    margin-top: -42px;
+    border-radius: 8px;
+}
+
+  /*                       */
+ /*   GAME PAGE BUTTONS   */
+/*                       */
+
+#button-container {
+    background-color: var(--bg-color);
+    width: fit-content;
+    height: fit-content;
+    padding: 8px;
+    margin-left: 15px;
+    margin-top: -25px;
+    border-radius: 13px;
+}
+
+.play-button {
+    border-radius: 7px;
+    background-color: rgb(61, 177, 31);
+    font-size: 19px;
+    color: #fff;
+    border: 1px solid #fff5;
+    padding: 0 20px;
+    height: 60px;
+    cursor: pointer;
+    width: 180px;
+    justify-content: center;
+    align-content: center;
+    text-decoration: none;
+    transition: all 200ms;
+}
+
+.play-button:hover {
+    box-shadow: #0003 5px 5px 20px;
+    transform: scale(1.025);
+}
+
+
   /*            */
  /* GAME GRID  */
 /*            */
@@ -323,27 +365,6 @@ img.grid-item {
   /*            */
  /*  BUTTONS   */
 /*            */
-
-.play-button {
-    border-radius: 10px;
-    background-color: rgb(61, 177, 31);
-    font-size: 19px;
-    color: #fff;
-    border: 1px solid #fff5;
-    padding: 0 20px;
-    height: 40px;
-    cursor: pointer;
-    width: 110px;
-    justify-content: center;
-    align-content: center;
-    text-decoration: none;
-    transition: all 200ms;
-}
-
-.play-button:hover {
-    box-shadow: #0003 5px 5px 20px;
-    transform: scale(1.025);
-}
 
 .preferable-button {
     font-size: 16px;

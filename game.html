@@ -15,32 +15,36 @@
         </header>
 
         <div class="main-content">
+
             <nav>
                 <button id="library-button"><img class="rail-button-icon" src="svg/library.svg"></button>
                 <button id="downloads-button"><img class="rail-button-icon" src="svg/download.svg"></button>
                 <button id="settings-button"><img class="rail-button-icon" src="svg/gear.svg"></button>
                 <button id="player-button"><img class="rail-button-icon" src="svg/disc.svg"></button>
             </nav>
-            <div class="hero-container" style="display: flex; flex-direction: row;">
-                <style>
-                    .button-area {
-                        top: 70%;
-                        height: 45px;
-                        position: absolute;
-                        z-index: 10;
-                        width: 100%;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                    }
-                </style>
-                <div id="button-area" class="button-area">
-                    <button class="play-button">Play</button>
+
+            <div style="width: 100%; margin: 0px 12px; position: relative;">
+
+                <div class="top-area-image">
+
+                    <div class="hero-image">
+                        <img class="logo-image" src="images/logo.png" alt="Game Title">
+                    </div>
+
                 </div>
-                <img class="logo-image" src="images/logo.png" alt="Logo">
-                <img class="hero-image" src="images/hero.png" alt="Hero">
+
+                <div id="button-container">
+                    <button class="play-button">▶ Start</button>
+                </div>
+
+                <div class="play-partition">
+
+                </div>
+
             </div>
+
         </div>
+
     </body>
 </html>
 
