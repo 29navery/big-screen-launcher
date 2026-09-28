@@ -4,6 +4,21 @@ const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
 
+// settings because everything is a loser and hates when I call it before it exists
+const bslDir = path.join(app.getPath('documents'), 'Big Screen Launcher');
+const settingsFilePath = path.join(bslDir, '.settings.json');
+
+// apply settings
+function applySettings() {
+    const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
+    app.setLoginItemSettings({
+        openAtLogin: !!settings.startWithWindows,
+        openAsHidden: true
+    });
+
+    if (audioWindow) audioWindow.setAlwaysOnTop(!!settings.keepIpodOnTop);
+}
+
 // tray & window
 let mainWindow;
 let audioWindow;
@@ -140,6 +155,8 @@ app.whenReady().then(() => {
             createWindow();
         }
     });
+
+    applySettings();
 });
 
 app.on('window-all-closed', () => {
@@ -147,13 +164,6 @@ app.on('window-all-closed', () => {
         //app.quit();
     }
 });
-
-app.setLoginItemSettings({
-    openAtLogin: false,
-    openAsHidden: true
-});
-
-
 
 // shortcuts & dialog handlers
 ipcMain.handle('dialog:open-game-file', async () => {
@@ -189,7 +199,22 @@ ipcMain.handle('get-user-data-path', () => {
 });
 
 
+// ipod
+ipcMain.handle('show-ipod-if-enabled', () => {
+    if (fs.existsSync(settingsFilePath)) {
+        try {
+            const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
+            if (settings.showIpod && audioWindow && !audioWindow.isDestroyed()) {
+                audioWindow.show();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+});
 
+
+//version
 let appVersion = '26.0';
 try {
     const versionPath = path.join(__dirname, 'appversion.txt');
@@ -203,7 +228,6 @@ ipcMain.handle('get-app-version', () => appVersion);
 
 
 // user data
-const bslDir = path.join(app.getPath('documents'), 'Big Screen Launcher');
 if (!fs.existsSync(bslDir)) {
     fs.mkdirSync(bslDir, { recursive: true });
 }
@@ -236,7 +260,6 @@ ipcMain.handle('save-games', (event, gamesArray) => {
 });
 
 
-const settingsFilePath = path.join(bslDir, '.settings.json');
 
 ipcMain.handle('load-settings', () => {
     try {
@@ -255,6 +278,7 @@ ipcMain.handle('save-settings', (event, settingsData) => {
             fs.mkdirSync(bslDir, { recursive: true });
         }
         fs.writeFileSync(settingsFilePath, JSON.stringify(settingsData, null, 2), 'utf8');
+        applySettings();
         return true;
     } catch (err) {
         console.error("Could not save settings:", err);
@@ -417,13 +441,13 @@ function hasIpcHandler(channel) {
 }
 
 
-
 // download da shyt
 
 const https = require('https');
 const http = require('http');
 const AdmZip = require('adm-zip');
 const unrar = require('node-unrar-js');
+const { settings } = require('cluster');
 
 let activeDownloadReq = null;
 

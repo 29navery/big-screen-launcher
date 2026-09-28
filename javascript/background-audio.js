@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, ipcMain } = require('electron');
 
 const player = new Audio();
 let queue = [];
@@ -80,6 +80,9 @@ function playTrackAtIndex(index) {
     player.play().catch(err => console.error("Audio playback error:", err));
     sendStatus();
     loadLyrics(currentMetadata.artist, currentMetadata.title);
+    player.addEventListener('play', () => {
+        ipcRenderer.invoke('show-ipod-if-enabled');
+    });
 }
 
 // Helpers for time
@@ -167,7 +170,13 @@ ipcRenderer.on('receive-audio-command', (event, data) => {
     } else if (data.action === 'resume') {
         player.play().catch(err => console.error("Audio resume error:", err));
         sendStatus();
+        player.addEventListener('play', () => {
+            ipcRenderer.invoke('show-ipod-if-enabled');
+        });
     } else if (data.action === 'toggle') {
+        player.addEventListener('play', () => {
+            ipcRenderer.invoke('show-ipod-if-enabled');
+        });
         if (player.paused) {
             player.play().catch(err => console.error("Audio resume error:", err));
         } else {
