@@ -1,5 +1,5 @@
 // hello I am the electron script
-const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session, net } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -444,6 +444,7 @@ function hasIpcHandler(channel) {
 
 // download da shyt
 
+const axios = require('axios');
 const https = require('https');
 const http = require('http');
 const AdmZip = require('adm-zip');
@@ -699,163 +700,160 @@ async function extractArchive(archivePath, destFolder) {
     }
 }
 
-
-
-// start
+// start download
 ipcMain.handle('start-download', async (event, payload) => {
-    const { gameName, downloadUrl, exeName, version, cover } = payload;
+    let zipPath = '';
+    try {
+        const { gameName, downloadUrl, exeName, version, cover } = payload;
 
-    const gameFolder = path.join(
-        app.getPath('documents'),
-        'Big Screen Launcher',
-        'Games',
-        gameName
-    );
-    
-    fs.mkdirSync(gameFolder, { recursive: true });
+        if (!downloadUrl) {
+            throw new Error('No download URL provided.');
+        }
 
-    const zipPath = path.join(gameFolder, 'download_temp.zip');
-    const fileStream = fs.createWriteStream(zipPath);
-    const client = downloadUrl.startsWith('https') ? https : http;
+        const gameFolder = path.join(
+            app.getPath('documents'),
+            'Big Screen Launcher',
+            'Games',
+            gameName
+        );
+        
+        fs.mkdirSync(gameFolder, { recursive: true });
+        zipPath = path.join(gameFolder, 'download_temp.zip');
+        const fileStream = fs.createWriteStream(zipPath);
 
-    return new Promise((resolve, reject) => {
-        activeDownloadReq = client.get(downloadUrl, (response) => {
-            if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-                return ipcMain.handlers.get('start-download')(event, {
-                    ...payload,
-                    downloadUrl: response.headers.location
-                }).then(resolve).catch(reject);
-            }
+        // Uses Chromium's network stack (same as Google Chrome!)
+        const response = await net.fetch(downloadUrl);
 
-            if (response.statusCode !== 200) {
-                fs.unlink(zipPath, () => {});
-                return reject(new Error(`Server returned HTTP ${response.statusCode}`));
-            }
+        if (!response.ok) {
+            throw new Error(`Server returned HTTP ${response.status}`);
+        }
 
-            const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
-            let transferredBytes = 0;
-            let startTime = Date.now();
+        const totalBytes = parseInt(response.headers.get('content-length') || '0', 10);
+        let transferredBytes = 0;
+        let startTime = Date.now();
 
-            response.on('data', (chunk) => {
-                transferredBytes += chunk.length;
-                fileStream.write(chunk);
+        // Read chunks using Chromium's native stream reader
+        const reader = response.body.getReader();
 
-                if (totalBytes > 0) {
-                    const percent = (transferredBytes / totalBytes) * 100;
-                    const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
-                    const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
-                    
-                    const elapsedSec = (Date.now() - startTime) / 1000;
-                    const speedBytesPerSec = transferredBytes / elapsedSec;
-                    const remainingSec = Math.ceil((totalBytes - transferredBytes) / (speedBytesPerSec || 1));
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-                    const mins = Math.floor(remainingSec / 60);
-                    const secs = remainingSec % 60;
+            transferredBytes += value.length;
+            fileStream.write(value);
 
-                    event.sender.send('download-progress', {
-                        status: 'downloading',
-                        gameName,
-                        percent,
-                        transferredMB,
-                        totalMB,
-                        etaStr: `${mins}m ${secs}s left`
-                    });
-                }
-            });
+            if (totalBytes > 0) {
+                const percent = (transferredBytes / totalBytes) * 100;
+                const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
+                const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+                
+                const elapsedSec = (Date.now() - startTime) / 1000;
+                const speedBytesPerSec = transferredBytes / elapsedSec;
+                const remainingSec = Math.ceil((totalBytes - transferredBytes) / (speedBytesPerSec || 1));
 
-            response.on('end', () => {
-                fileStream.end(async () => {
-                    try {
-                        // 1. Notify UI that extraction is starting
-                        event.sender.send('download-progress', {
-                            status: 'downloading',
-                            gameName,
-                            percent: 100,
-                            transferredMB: '',
-                            totalMB: '',
-                            etaStr: 'Extracting game files...'
-                        });
+                const mins = Math.floor(remainingSec / 60);
+                const secs = remainingSec % 60;
 
-                        // 2. Automatically extract .rar or .zip
-                        await extractArchive(zipPath, gameFolder);
-
-                        // 3. Clean up temporary archive file
-                        if (fs.existsSync(zipPath)) {
-                            fs.unlinkSync(zipPath);
-                        }
-
-                        // 4. Flatten directory if extracted into a single wrapper subfolder
-                        flattenIfSingleSubfolder(gameFolder);
-
-                        // 5. Detect executable
-                        let finalExeName = exeName;
-                        if (!finalExeName) {
-                            finalExeName = findExecutableInFolder(gameFolder, gameName);
-                        }
-
-                        // 6. Notify UI that artwork is being fetched
-                        event.sender.send('download-progress', {
-                            status: 'downloading',
-                            gameName,
-                            percent: 100,
-                            transferredMB: '',
-                            totalMB: '',
-                            etaStr: 'Fetching game artwork...'
-                        });
-
-                        // 7. Fetch SteamGridDB artwork automatically
-                        let gameCover = cover || "images/images.jpg";
-                        let gameHero = null;
-                        let gameLogo = null;
-
-                        try {
-                            const fetchedCover = await fetchGameArt(gameName);
-                            if (fetchedCover) gameCover = fetchedCover;
-
-                            gameHero = await fetchGameHero(gameName);
-                            gameLogo = await fetchGameLogo(gameName);
-                        } catch (artErr) {
-                            console.error("Failed to fetch artwork automatically:", artErr);
-                        }
-
-                        // 8. Register in library
-                        saveGameToLibrary({
-                            name: gameName,
-                            version: version || "1.0.0",
-                            cover: gameCover,
-                            hero: gameHero,
-                            logo: gameLogo,
-                            exe: finalExeName,
-                            path: path.join(gameFolder, finalExeName)
-                        });
-
-                        event.sender.send('download-progress', { status: 'completed', gameName });
-                        resolve({ success: true });
-                    } catch (extractErr) {
-                        console.error('Failed to extract archive:', extractErr);
-                        reject(new Error(`Extraction failed: ${extractErr.message}`));
-                    }
+                event.sender.send('download-progress', {
+                    status: 'downloading',
+                    gameName,
+                    percent,
+                    transferredMB,
+                    totalMB,
+                    etaStr: `${mins}m ${secs}s left`
                 });
-            });
+            }
+        }
 
-            response.on('error', (err) => {
-                fileStream.end();
-                fs.unlink(zipPath, () => {});
-                reject(err);
-            });
+        fileStream.end(async () => {
+            try {
+                event.sender.send('download-progress', {
+                    status: 'downloading',
+                    gameName,
+                    percent: 100,
+                    transferredMB: '',
+                    totalMB: '',
+                    etaStr: 'Extracting game files...'
+                });
+
+                await extractArchive(zipPath, gameFolder);
+
+                if (fs.existsSync(zipPath)) {
+                    fs.unlinkSync(zipPath);
+                }
+
+                flattenIfSingleSubfolder(gameFolder);
+
+                let finalExeName = exeName;
+                if (!finalExeName) {
+                    finalExeName = findExecutableInFolder(gameFolder, gameName);
+                }
+
+                event.sender.send('download-progress', {
+                    status: 'downloading',
+                    gameName,
+                    percent: 100,
+                    transferredMB: '',
+                    totalMB: '',
+                    etaStr: 'Fetching game artwork...'
+                });
+
+                let gameCover = cover || "images/images.jpg";
+                let gameHero = null;
+                let gameLogo = null;
+
+                try {
+                    const fetchedCover = await fetchGameArt(gameName);
+                    if (fetchedCover) gameCover = fetchedCover;
+
+                    gameHero = await fetchGameHero(gameName);
+                    gameLogo = await fetchGameLogo(gameName);
+                } catch (artErr) {
+                    console.error("Failed to fetch artwork automatically:", artErr);
+                }
+
+                saveGameToLibrary({
+                    name: gameName,
+                    version: version || "1.0.0",
+                    cover: gameCover,
+                    hero: gameHero,
+                    logo: gameLogo,
+                    exe: finalExeName,
+                    path: path.join(gameFolder, finalExeName)
+                });
+
+                event.sender.send('download-progress', { status: 'completed', gameName });
+            } catch (extractErr) {
+                console.error('Failed to extract archive:', extractErr);
+            }
         });
 
-        activeDownloadReq.on('error', (err) => {
-            fileStream.end();
-            fs.unlink(zipPath, () => {});
-            reject(err);
-        });
-    });
+        return { success: true };
+
+    } catch (error) {
+        console.error("Download failed:", error);
+        if (zipPath && fs.existsSync(zipPath)) {
+            fs.unlinkSync(zipPath);
+        }
+
+        const errStr = error.message || '';
+        if (
+            errStr.includes('TLS') || 
+            errStr.includes('socket disconnected') || 
+            errStr.includes('ECONNRESET') || 
+            errStr.includes('CERT') ||
+            errStr.includes('net::')
+        ) {
+            throw new Error('Fatal error with TLS handshake, downloads cannot be reach at this time!');
+        }
+
+        throw error;
+    }
 });
 
 
 
-// stop
+// stop download
 ipcMain.handle('stop-download', async (event) => {
     if (activeDownloadReq) {
         activeDownloadReq.destroy();
