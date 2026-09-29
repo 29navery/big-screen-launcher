@@ -110,9 +110,84 @@ function isUpdateAvailable(localVersion, remoteVersion) {
 
             affectors.classList.add('affectors');
 
-            if (game.controller === true) { /* ... */ }
-            if (game.dlc === true) { /* ... */ }
-            if (game.lag === true) { /* ... */ }
+            if (game.controller === true) { 
+                const gamepadIcon = document.createElement("img");
+                gamepadIcon.setAttribute('src', 'svg/gamepad.svg');
+                gamepadIcon.style.setProperty('width', '32px');
+                gamepadIcon.style.setProperty('postion', 'absolute');
+
+                affectors.appendChild(gamepadIcon);
+                newItem.addEventListener('mouseenter', () => {
+                    gamepadIcon.animate([
+                        { opacity: 1}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+                newItem.addEventListener('mouseleave', () => {
+                    gamepadIcon.animate([
+                        { opacity: 0.5}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+             }
+            if (game.dlc === true) { 
+                const gamepadIcon = document.createElement("img");
+                gamepadIcon.setAttribute('src', 'svg/dlc.svg');
+                gamepadIcon.style.setProperty('width', '32px');
+                gamepadIcon.style.setProperty('postion', 'absolute');
+
+                affectors.appendChild(gamepadIcon);
+                newItem.addEventListener('mouseenter', () => {
+                    gamepadIcon.animate([
+                        { opacity: 1}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+                newItem.addEventListener('mouseleave', () => {
+                    gamepadIcon.animate([
+                        { opacity: 0.5}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+             }
+            if (game.lag === true) { 
+                const gamepadIcon = document.createElement("img");
+                gamepadIcon.setAttribute('src', 'svg/lag.svg');
+                gamepadIcon.style.setProperty('width', '32px');
+                gamepadIcon.style.setProperty('postion', 'absolute');
+
+                affectors.appendChild(gamepadIcon);
+                newItem.addEventListener('mouseenter', () => {
+                    gamepadIcon.animate([
+                        { opacity: 1}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+                newItem.addEventListener('mouseleave', () => {
+                    gamepadIcon.animate([
+                        { opacity: 0.5}
+                    ], {
+                        duration: 200,
+                        easing: 'ease-out',
+                        fill: 'forwards'
+                    });
+                });
+             }
 
             newItem.addEventListener('click', () => {
                 const gameSize = game.size || game.fileSize || game.filesize || game.downloadSize || null;
