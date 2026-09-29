@@ -926,3 +926,10 @@ ipcMain.handle('get-installed-games', async () => {
         return [];
     }
 });
+
+
+
+// open game folder
+ipcMain.on('open-game-folder', (event, filePath) => {
+    shell.showItemInFolder(filePath);
+});

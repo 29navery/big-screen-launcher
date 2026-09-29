@@ -150,6 +150,7 @@ function updateButtonState(button, status) {
 
 const favorite = document.getElementById('favorite-button')
 const options = document.getElementById('options-button');
+const folder = document.getElementById('folder-button');
 const remove = document.getElementById('remove-button');
 
 // remove
@@ -198,5 +199,18 @@ document.addEventListener('click', (event) => {
     });
     if (optionsWindow && !optionsWindow.contains(event.target) && !options.contains(event.target)) {
         optionsCover.style.setProperty('display', 'none');
+    }
+});
+
+
+// folder
+folder.addEventListener('click', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameIndex = urlParams.get('index');
+    const games = await ipcRenderer.invoke('load-games');
+    const game = games[gameIndex];
+
+    if (game && game.path) {
+        ipcRenderer.send('open-game-folder', game.path);
     }
 });
