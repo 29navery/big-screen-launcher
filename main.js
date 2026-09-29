@@ -34,7 +34,7 @@ ipcMain.on('restart-app', () => {
 
 const createWindow = () => {
     mainWindow = new BrowserWindow({
-        width: 1200,
+        width: 1240,
         height: 720,
         minWidth: 800,
         minHeight: 600,
