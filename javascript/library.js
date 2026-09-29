@@ -1,3 +1,13 @@
+// sound
+function playSound(fileName) {
+    const audio = new Audio(`assets/sounds/${fileName}.ogg`);
+    audio.volume = 0.5;
+    audio.play().catch(err => {
+        console.log("Audio playback prevented:", err);
+    });
+}
+
+// games
 const addGameButton = document.getElementById('add-game-btn');
 
 async function launchGame(index) {
@@ -35,6 +45,10 @@ async function renderGamesGrid() {
 
         newDiv.addEventListener('click', () => {
             window.location.href = `game.html?index=${index}`;
+        });
+
+        newDiv.addEventListener('mouseenter', () => {
+            playSound('drop_003');
         });
     });
 }

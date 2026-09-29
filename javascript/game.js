@@ -67,6 +67,37 @@ async function initGamePage() {
 
 document.addEventListener('DOMContentLoaded', initGamePage);
 
+// sound
+
+function playSound(fileName) {
+    const audio = new Audio(`assets/sounds/${fileName}.ogg`);
+    audio.volume = 0.5;
+    audio.play().catch(err => {
+        console.log("Audio playback prevented:", err);
+    });
+}
+
+// launch
+
+const launchButton = document.getElementById('play-button');
+
+launchButton.addEventListener('click', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameIndex = urlParams.get('index');
+    launchGame(gameIndex);
+    playSound('maximize_007');
+});
+
+async function launchGame(index) {
+    const games = await ipcRenderer.invoke('load-games');
+    const game = games[index];
+
+    if (game) {
+        console.log(`Launching game: ${game.name || 'Unnamed'}`);
+        ipcRenderer.invoke('launch-game-process', game);
+    }
+}
+
 // buttons
 
 const favorite = document.getElementById('favorite-button')
