@@ -63,3 +63,16 @@ ipcRenderer.on('receive-audio-status', (event, data) => {
 
 // load fast
 ipcRenderer.send('request-audio-status');
+
+// prompt buttons
+async function initButtonTexts() {
+    const settings = await ipcRenderer.invoke('load-settings') || {};
+    
+    const yesBtn = document.getElementById('deletion-prompt-yes');
+    const noBtn = document.getElementById('deletion-prompt-no');
+
+    if (yesBtn) yesBtn.textContent = settings.yesTextInput || 'yeah, it sucked anyway';
+    if (noBtn) noBtn.textContent = settings.noTextInput || 'nah, nevermind';
+}
+
+initButtonTexts();

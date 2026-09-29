@@ -55,6 +55,8 @@ const apiKeyInput = document.getElementById('sgdb-api-key-input');
 const startWithWindowsCb = document.getElementById('start-with-windows');
 const showIpodCb = document.getElementById('show-ipod-automatically');
 const keepIpodCb = document.getElementById('keep-ipod-front');
+const yesTextInput = document.getElementById('yes-button-text-input');
+const noTextInput = document.getElementById('no-button-text-input');
 
 // auto save
 async function autoSave() {
@@ -62,7 +64,9 @@ async function autoSave() {
         apiKey: apiKeyInput ? apiKeyInput.value.trim() : '',
         startWithWindows: startWithWindowsCb ? startWithWindowsCb.checked : false,
         showIpod: showIpodCb ? showIpodCb.checked : false,
-        keepIpodOnTop: keepIpodCb ? keepIpodCb.checked : false
+        keepIpodOnTop: keepIpodCb ? keepIpodCb.checked : false,
+        noTextInput: noTextInput.value.trim() || 'nah, nevermind',
+        yesTextInput: yesTextInput.value.trim() || 'yeah, it sucked anyway'
     };
 
     try {
@@ -81,6 +85,8 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (startWithWindowsCb) startWithWindowsCb.checked = !!settings.startWithWindows;
             if (showIpodCb) showIpodCb.checked = !!settings.showIpod;
             if (keepIpodCb) keepIpodCb.checked = !!settings.keepIpodOnTop;
+            if (noTextInput) noTextInput.value = settings.noTextInput || 'nah, nevermind';
+            if (yesTextInput) yesTextInput.value = settings.yesTextInput || 'yeah, it sucked anyway';
         }
     } catch (err) {
         console.error("Failed to load settings:", err);
@@ -90,4 +96,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (startWithWindowsCb) startWithWindowsCb.addEventListener('change', autoSave);
     if (showIpodCb) showIpodCb.addEventListener('change', autoSave);
     if (keepIpodCb) keepIpodCb.addEventListener('change', autoSave);
+    if (yesTextInput) yesTextInput.addEventListener('input', autoSave);
+    if (noTextInput) noTextInput.addEventListener('input', autoSave);
 });

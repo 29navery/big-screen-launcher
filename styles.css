@@ -26,6 +26,10 @@
     --checkbox-size: 24px;
     --checkbox-accent-color: #675fff;
 
+    --textinput-background: #131314;
+    --prompt-window-color: #222326;
+    --prompt-window-outline-color: #393a3e;
+
     /* traffic light status colors */
     --status-green: rgb(20, 255, 20);
     --status-yellow: rgb(255, 228, 20);
@@ -447,7 +451,7 @@ img.grid-item {
     background-color: var(--normal-button-color);
     color: #fff;
     border: 1px solid #fff5;
-    padding: 0 30px;
+    padding: 0 20px;
     height: 40px;
     cursor: pointer;
     justify-content: center;
@@ -710,7 +714,7 @@ img.grid-item {
 }
 
 .settings-section input {
-    background-color: #0003;
+    background-color: var(--textinput-background);
     width: 95%;
     border: 1px solid #fff3;
     color: #fff;
@@ -840,9 +844,9 @@ input[type='checkbox']:disabled {
 
     width: 450px;
     height: 205px;
-    background-color: var(--rail-button-color);
+    background-color: var(--prompt-window-color);
     border-radius: 10px;
-    border: 1.65px solid var(--rail-button-outline-color);
+    border: 1.65px solid var(--prompt-window-outline-color);
 }
 
 #name-prompt-window input {
@@ -892,14 +896,14 @@ input[type='checkbox']:disabled {
 
     width: 450px;
     height: 205px;
-    background-color: var(--rail-button-color);
+    background-color: var(--prompt-window-color);
     border-radius: 10px;
-    border: 1.65px solid var(--rail-button-outline-color);
+    border: 1.65px solid var(--prompt-window-outline-color);
 }
 
 #deletion-prompt-window input {
     width: 70%;
-    background-color: var(--rail-color);
+    background-color: var(--textinput-background);
     border-radius: 5px;
     border: 0;
     color: #fff;
@@ -915,6 +919,58 @@ input[type='checkbox']:disabled {
     margin-top: 10px;
     color: #787981;
     max-width: 90%;
+}
+
+  /*                       */
+ /*   GAME OPTIONS MENU   */
+/*                       */
+
+#options-cover {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    background-color: #0005;
+    z-index: 99999;
+    overflow: hidden;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+#options-window {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+
+    width: 500px;
+    height: 505px;
+    background-color: var(--prompt-window-color);
+    border-radius: 10px;
+    border: 1.65px solid var(--prompt-window-outline-color);
+}
+
+#options-window input {
+    width: 70%;
+    background-color: var(--textinput-background);
+    border-radius: 5px;
+    border: 0;
+    color: #fff;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+}
+
+#options-window h2 {
+    margin: 0;
+    text-align: left;
+}
+
+#options-window p {
+    margin-top: 10px;
+    color: #b4b5bd;
+    max-width: 90%;
+    text-align: left;
 }
 
   /*                */

@@ -70,8 +70,10 @@ document.addEventListener('DOMContentLoaded', initGamePage);
 // buttons
 
 const favorite = document.getElementById('favorite-button')
+const options = document.getElementById('options-button');
 const remove = document.getElementById('remove-button');
 
+// remove
 const deleteYes = document.getElementById('deletion-prompt-yes');
 const deleteNo = document.getElementById('deletion-prompt-no');
 
@@ -98,5 +100,24 @@ favorite.addEventListener('click', () => {
         img.src = 'svg/heart.svg';
     }
 
-    
+
+});
+
+
+// options
+const optionsCover = document.getElementById('options-cover');
+const optionsWindow = document.getElementById('options-window');
+
+options.addEventListener('click', () => {
+    optionsCover.style.setProperty('display', 'block');
+});
+
+document.addEventListener('click', (event) => {
+    options.addEventListener('click', (event) => {
+        event.stopPropagation();
+        optionsCover.style.setProperty('display', 'flex');
+    });
+    if (optionsWindow && !optionsWindow.contains(event.target) && !options.contains(event.target)) {
+        optionsCover.style.setProperty('display', 'none');
+    }
 });
