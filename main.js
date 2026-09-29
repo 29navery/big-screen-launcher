@@ -1,6 +1,7 @@
 // hello I am the electron script
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session } = require('electron');
 const { autoUpdater } = require('electron-updater');
+const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -451,6 +452,9 @@ const { settings } = require('cluster');
 
 let activeDownloadReq = null;
 
+// processes
+const activeProcesses = new Map()
+
 ipcMain.handle('launch-game-process', async (event, game) => {
     if (!game) {
         throw new Error('No game payload provided to launch-game-process.');
@@ -496,14 +500,65 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         throw new Error(`Executable file not found at: ${exePath}`);
     }
 
-    const errorMessage = await shell.openPath(exePath);
-    if (errorMessage) {
-        throw new Error(`Failed to launch process: ${errorMessage}`);
+    if (activeProcesses.has(exePath)) {
+        console.log("Game is already running.");
+        return { success: true };
+    }
+
+    try {
+        // Broadcast 'starting' globally
+        broadcastStatus(exePath, 'starting');
+
+        const child = spawn(exePath, [], { 
+            detached: true, 
+            stdio: 'ignore',
+            cwd: path.dirname(exePath) 
+        });
+        
+        child.unref();
+        activeProcesses.set(exePath, child);
+
+        // Broadcast 'running' globally
+        broadcastStatus(exePath, 'running');
+
+        // Listen for when the game process closes
+        child.on('exit', () => {
+            activeProcesses.delete(exePath);
+            // Broadcast 'stopped' globally so the UI instantly updates!
+            broadcastStatus(exePath, 'stopped');
+        });
+
+    } catch (error) {
+        activeProcesses.delete(exePath);
+        broadcastStatus(exePath, 'stopped');
+        throw new Error(`Failed to launch process: ${error.message}`);
     }
 
     return { success: true };
 });
 
+// stop
+ipcMain.handle('stop-game-process', async (event, game) => {
+    const targetPath = game.path;
+    const child = activeProcesses.get(targetPath);
+    
+    if (child) {
+        child.kill();
+        activeProcesses.delete(targetPath);
+        broadcastStatus(targetPath, 'stopped');
+    }
+});
+
+function broadcastStatus(gamePath, status) {
+    // console.log(`Broadcasting status: ${status} for ${gamePath}`);
+    BrowserWindow.getAllWindows().forEach((win) => {
+        win.webContents.send('game-status-update', { path: gamePath, status });
+    });
+}
+
+ipcMain.handle('get-game-status', async (event, gamePath) => {
+    return activeProcesses.has(gamePath) ? 'running' : 'stopped';
+});
 
 
 // smart search

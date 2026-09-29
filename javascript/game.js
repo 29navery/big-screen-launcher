@@ -98,6 +98,54 @@ async function launchGame(index) {
     }
 }
 
+document.addEventListener('DOMContentLoaded', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameIndex = urlParams.get('index');
+
+    const games = await ipcRenderer.invoke('load-games');
+    const game = games[gameIndex];
+
+    if (!game) {
+        console.error("Game not found for index:", gameIndex);
+        return;
+    }
+
+    const currentStatus = await ipcRenderer.invoke('get-game-status', game.path);
+    updateButtonState(launchButton, currentStatus);
+
+    ipcRenderer.on('game-status-update', (event, data) => {
+        if (data.path === game.path) {
+            updateButtonState(launchButton, data.status);
+        }
+    });
+
+    launchButton.onclick = async () => {
+        const liveStatus = await ipcRenderer.invoke('get-game-status', game.path);
+        
+        if (liveStatus === 'running') {
+            await ipcRenderer.invoke('stop-game-process', game);
+        } else {
+            await ipcRenderer.invoke('launch-game-process', game);
+        }
+    };
+});
+
+function updateButtonState(button, status) {
+    if (status === 'starting') {
+        button.textContent = '✖ Starting . . .';
+        button.style.setProperty('background-color', '#4eb7d1')
+        button.disabled = true;
+    } else if (status === 'running') {
+        button.textContent = '✖ Stop';
+        button.style.setProperty('background-color', '#4eb7d1')
+        button.disabled = false;
+    } else {
+        button.textContent = '▶ Start';
+        button.style.setProperty('background-color', '')
+        button.disabled = false;
+    }
+}
+
 // buttons
 
 const favorite = document.getElementById('favorite-button')
