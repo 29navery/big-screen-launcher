@@ -383,8 +383,7 @@ nav button:hover {
 }
 
 div.grid-item:hover {
-    transform: translateY(-3px);
-    box-shadow: #fff5 0px 7px 15px;
+    transform: translateY(-2px);
     border: 1px solid #fff;
     cursor: pointer;
 }

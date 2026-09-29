@@ -76,3 +76,10 @@ async function initButtonTexts() {
 }
 
 initButtonTexts();
+
+// update version number in titlebar
+const numberBox = document.getElementById('version-number');
+
+ipcRenderer.invoke('get-app-version').then((version) => {
+    numberBox.textContent = 'v' + version;
+});
