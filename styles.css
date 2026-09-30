@@ -30,6 +30,8 @@
     --prompt-window-color: #222326;
     --prompt-window-outline-color: #393a3e;
 
+    --minecraft-dropdown-hr-color: #282829;
+
     /* traffic light status colors */
     --status-green: rgb(20, 255, 20);
     --status-yellow: rgb(255, 228, 20);
@@ -249,6 +251,90 @@ nav button:hover {
     left: 231px;
 
     margin-top: -50px;
+}
+
+.mc-dropdown {
+    position: absolute;
+    background-color: #131314;
+
+    left: 231px;
+    margin-top: -10px;
+    width: 180px;
+    height: 210px;
+
+    padding: 0 10px;
+
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+.minecraft-version-divider {
+    background-color: var(--rail-color);
+    height: 100%;
+    border-radius: 6px;
+
+    padding: 0 10px;
+    width: 180px;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    cursor: pointer;
+    transition: all 200ms;
+}
+
+.minecraft-version-divider:hover {
+    background-color: #333336;
+}
+
+.minecraft-version-hr {
+    border: 1px solid var(--minecraft-dropdown-hr-color);
+}
+
+.minecraft-dropdown-item {
+    width: 100%;
+    height: 45px;
+
+    background: transparent;
+    border: none;
+
+    color: #fff;
+    
+    display: flex;
+    align-items: center;
+    justify-items: left;
+    justify-content: left;
+
+    gap: 7px;
+    border-radius: 9px;
+
+    cursor: pointer;
+    transition: all 200ms;
+}
+
+.minecraft-dropdown-item:hover {
+    background-color: #333336;
+}
+
+.minecraft-dropdown-item img {
+    height: 80%;
+    border-radius: 6px;
+}
+
+.minecraft-version-divider p {
+    width: 90%;
+
+    text-wrap-mode: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap-mode: nowrap;
+
+}
+
+.minecraft-version-divider svg {
+    height: 60%;
 }
 
 .game-options-divider {

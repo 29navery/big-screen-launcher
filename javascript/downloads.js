@@ -381,3 +381,12 @@ if (refreshButton) {
         }
     });
 })();
+
+
+// minecraft handler
+
+const minecraftButton = document.getElementById('minecraft-button');
+
+minecraftButton.addEventListener('click', () => {
+    
+});
