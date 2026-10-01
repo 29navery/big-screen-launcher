@@ -47,7 +47,7 @@
                 <div class="top-area-image">
 
                     <div class="hero-image">
-                        <img class="logo-image" src="images/logo.png" alt="Game Title">
+                        <img class="logo-image">
                     </div>
 
                 </div>
@@ -56,10 +56,10 @@
                     <button id="play-button" class="play-button">▶ Start</button>
                 </div>
 
-                <div class="mc-dropdown">
+                <div id="dropdown-menu" class="mc-dropdown">
                     <hr class="minecraft-version-hr">
                     <!-- content -->
-                    <div style="overflow-y: scroll; height: 180px; scroll-behavior: smooth;">
+                    <div style="overflow-y: scroll; height: 85%; scroll-behavior: smooth;">
 
                         <button class="minecraft-dropdown-item">
 
@@ -75,9 +75,10 @@
                 </div>
 
                 <div class="options-partition">
-                    <div class="minecraft-version-divider">
-                        <p>Minecraft 26.3.1</p>
-                        <svg width="32" height="32" viewBox="0 0 24 24" focusable="false" style="fill: #FFF;"><path id="collapse-svg" d="M5.41 7.59L4 9l8 8 8-8-1.41-1.41L12 14.17"></path></svg>
+                    <div id="dropdown" class="minecraft-version-divider">
+                        <img src="images/Minecraft.png" style="height: 80%; margin-left: -5px; margin-right: 6px; border-radius: 3px;">
+                        <p>Minecraft 26.2.1</p>
+                        <svg id="dropdown-arrow" width="32" height="32" viewBox="0 0 24 24" focusable="false" style="fill: #FFF;"><path id="collapse-svg" d="M5.41 7.59L4 9l8 8 8-8-1.41-1.41L12 14.17"></path></svg>
                     </div>
                     <div class="game-options-divider"></div>
                     <button id="favorite-button" class="game-options-button"><img src="svg/heart.svg"></button>

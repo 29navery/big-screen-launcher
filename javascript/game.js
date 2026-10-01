@@ -214,3 +214,35 @@ folder.addEventListener('click', async () => {
         ipcRenderer.send('open-game-folder', game.path);
     }
 });
+
+
+// mc dropdown
+const dropdown = document.getElementById('dropdown');
+const dropdownMenu = document.getElementById('dropdown-menu');
+
+const arrow = document.getElementById('dropdown-arrow');
+
+let animating = false
+
+dropdownMenu.style.display = 'none';
+
+dropdown.addEventListener('click', async () => {
+    if (!animating) {
+            const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        if (dropdownMenu.style.display !== 'block') {
+            animating = true;
+            dropdownMenu.style.display = 'block';
+            dropdownMenu.style.animation = 'unfold 200ms ease-out forwards'
+            arrow.style.animation = 'rotUp 200ms ease-out forwards'
+            await sleep(200);
+            animating = false;
+        } else {
+            animating = true;
+            dropdownMenu.style.animation = 'fold 200ms ease-out forwards'
+            arrow.style.animation = 'rotDown 200ms ease-out forwards'
+            await sleep(200);
+            dropdownMenu.style.display = 'none';
+            animating = false;
+        }
+    }
+});

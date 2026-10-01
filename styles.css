@@ -220,7 +220,7 @@ nav button:hover {
 }
 
 .hero-image {
-    background-image: url('images/hero.png');
+    background: linear-gradient(125deg, #4f5355, #383a3d);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -266,6 +266,43 @@ nav button:hover {
 
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
+    animation: unfold 200ms ease-out forwards;
+}
+
+@keyframes fold {
+    from {
+        height: 210px;
+    }
+    to {
+        height: 0;
+    }
+}
+
+@keyframes unfold {
+    from {
+        height: 0;
+    }
+    to {
+        height: 210px;
+    }
+}
+
+@keyframes rotUp {
+    from {
+        rotate: 0deg;
+    }
+    to {
+        rotate: 180deg;
+    }
+}
+
+@keyframes rotDown {
+    from {
+        rotate: 180deg;
+    }
+    to {
+        rotate: 0deg;
+    }
 }
 
 .minecraft-version-divider {
