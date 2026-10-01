@@ -303,75 +303,60 @@ function getApiKey() {
 
 
 // get the arts
-async function fetchGameArt(gameName) {
+const WORKER_URL = 'https://api-art-proxy.nicholasavery2.workers.dev';
+
+async function getGameId(gameName) {
     try {
-        let apiKey = getApiKey();
-        const headers = { 'Authorization': `Bearer ${apiKey}` };
-        const searchRes = await fetch(`https://www.steamgriddb.com/api/v2/search/autocomplete/${encodeURIComponent(gameName)}`, { headers });
-        const searchData = await searchRes.json();
-        
-        if (!searchData.success || !searchData.data || searchData.data.length === 0) return null;
-        const gameId = searchData.data[0].id;
-
-        const gridsRes = await fetch(`https://www.steamgriddb.com/api/v2/grids/game/${gameId}?dimensions=600x900,512x512`, { headers });
-        const gridsData = await gridsRes.json();
-
-        if (gridsData.success && gridsData.data && gridsData.data.length > 0) {
-            return gridsData.data[0].url;
-        }
+        const res = await net.fetch(`${WORKER_URL}/?endpoint=search/autocomplete/${encodeURIComponent(gameName)}`);
+        const data = await res.json();
+        return data.data?.[0]?.id || null;
     } catch (err) {
-        console.error('Error connecting to SteamGridDB:', err);
+        console.error("Proxy Search error:", err);
+        return null;
     }
-    return null;
 }
 
-async function fetchGameHero(gameName) {
+ipcMain.handle('fetch-game-art', async (event, gameName) => {
+    const gameId = await getGameId(gameName);
+    if (!gameId) return null;
+
     try {
-        let apiKey = getApiKey();
-        const headers = { 'Authorization': `Bearer ${apiKey}` };
-        const searchRes = await fetch(`https://www.steamgriddb.com/api/v2/search/autocomplete/${encodeURIComponent(gameName)}`, { headers });
-        const searchData = await searchRes.json();
-        
-        if (!searchData.success || !searchData.data || searchData.data.length === 0) return null;
-        const gameId = searchData.data[0].id;
-
-        const heroesRes = await fetch(`https://www.steamgriddb.com/api/v2/heroes/game/${gameId}`, { headers });
-        const heroesData = await heroesRes.json();
-
-        if (heroesData.success && heroesData.data && heroesData.data.length > 0) {
-            return heroesData.data[0].url;
-        }
+        const res = await net.fetch(`${WORKER_URL}/?endpoint=grids/game/${gameId}`);
+        const data = await res.json();
+        return data.data?.[0]?.url || null;
     } catch (err) {
-        console.error('Error connecting to SteamGridDB for hero art:', err);
+        console.error("Proxy Grid error:", err);
+        return null;
     }
-    return null;
-}
+});
 
-async function fetchGameLogo(gameName) {
+ipcMain.handle('fetch-game-hero', async (event, gameName) => {
+    const gameId = await getGameId(gameName);
+    if (!gameId) return null;
+
     try {
-        let apiKey = getApiKey();
-        const headers = { 'Authorization': `Bearer ${apiKey}` };
-        const searchRes = await fetch(`https://www.steamgriddb.com/api/v2/search/autocomplete/${encodeURIComponent(gameName)}`, { headers });
-        const searchData = await searchRes.json();
-        
-        if (!searchData.success || !searchData.data || searchData.data.length === 0) return null;
-        const gameId = searchData.data[0].id;
-
-        const logosRes = await fetch(`https://www.steamgriddb.com/api/v2/logos/game/${gameId}`, { headers });
-        const logosData = await logosRes.json();
-
-        if (logosData.success && logosData.data && logosData.data.length > 0) {
-            return logosData.data[0].url;
-        }
+        const res = await net.fetch(`${WORKER_URL}/?endpoint=heroes/game/${gameId}`);
+        const data = await res.json();
+        return data.data?.[0]?.url || null;
     } catch (err) {
-        console.error('Error connecting to SteamGridDB for logo art:', err);
+        console.error("Proxy Hero error:", err);
+        return null;
     }
-    return null;
-}
+});
 
-ipcMain.handle('fetch-game-art', (event, gameName) => fetchGameArt(gameName));
-ipcMain.handle('fetch-game-hero', (event, gameName) => fetchGameHero(gameName));
-ipcMain.handle('fetch-game-logo', (event, gameName) => fetchGameLogo(gameName));
+ipcMain.handle('fetch-game-logo', async (event, gameName) => {
+    const gameId = await getGameId(gameName);
+    if (!gameId) return null;
+
+    try {
+        const res = await net.fetch(`${WORKER_URL}/?endpoint=logos/game/${gameId}`);
+        const data = await res.json();
+        return data.data?.[0]?.url || null;
+    } catch (err) {
+        console.error("Proxy Logo error:", err);
+        return null;
+    }
+});
 
 
 
