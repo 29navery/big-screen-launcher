@@ -246,3 +246,32 @@ dropdown.addEventListener('click', async () => {
         }
     }
 });
+
+    // retrieve versions
+async function getVersions() {
+    const response = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
+    const data = await response.json();
+
+    return data.versions;
+}
+
+async function loadVersions() {
+    const versionBox = document.getElementById('versions-window');
+
+    try {
+        const allVersions = await getVersions();
+
+        const releases = allVersions.filter(v => v.type === 'release');
+
+        releases.forEach(version => {
+            const option = document.createElement('div');
+            option.textContent = `Minecraft ${version.id}`;
+            versionBox.appendChild(option);
+        })
+    } catch (err) {
+        console.error("failed to load the versions...", err);
+        versionBox.textContent = 'Failed to load Minecraft versions.'
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadVersions);

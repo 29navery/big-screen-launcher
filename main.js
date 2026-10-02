@@ -216,7 +216,7 @@ ipcMain.handle('show-ipod-if-enabled', () => {
 
 
 //version
-let appVersion = '26.0';
+let appVersion = 'ersion unavailable';
 try {
     const versionPath = path.join(__dirname, 'appversion.txt');
     appVersion = fs.readFileSync(versionPath, 'utf8').trim();

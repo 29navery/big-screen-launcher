@@ -30,7 +30,9 @@
     --prompt-window-color: #222326;
     --prompt-window-outline-color: #393a3e;
 
-    --minecraft-dropdown-hr-color: #282829;
+    /* minecraft version dropdown */
+    --minecraft-version-dropdown-fill-color: #131314;
+    --minecraft-version-dropdown-outline-color: #343636;
 
     /* traffic light status colors */
     --status-green: rgb(20, 255, 20);
@@ -255,34 +257,50 @@ nav button:hover {
 
 .mc-dropdown {
     position: absolute;
-    background-color: #131314;
+    background-color: var(--minecraft-version-dropdown-fill-color);
+
+    display: flex;
+    flex-direction: column;
 
     left: 231px;
-    margin-top: -10px;
+    margin-top: 0px;
     width: 180px;
     height: 210px;
 
-    padding: 0 10px;
+    padding: 10px 9px;
 
-    border-bottom-left-radius: 8px;
-    border-bottom-right-radius: 8px;
+    overflow-y: scroll;
+    scroll-behavior: smooth;
+
+    border-radius: 12px;
+    border: 1px solid var(--minecraft-version-dropdown-outline-color);
     animation: unfold 200ms ease-out forwards;
 }
 
 @keyframes fold {
     from {
+        opacity: 1;
         height: 210px;
     }
+    50% {
+        opacity: 1;
+    }
     to {
+        opacity: 0;
         height: 0;
     }
 }
 
 @keyframes unfold {
     from {
+        opacity: 0;
         height: 0;
     }
+    50% {
+        opacity: 1;
+    }
     to {
+        opacity: 1;
         height: 210px;
     }
 }
@@ -325,10 +343,6 @@ nav button:hover {
     background-color: #333336;
 }
 
-.minecraft-version-hr {
-    border: 1px solid var(--minecraft-dropdown-hr-color);
-}
-
 .minecraft-dropdown-item {
     width: 100%;
     height: 45px;
@@ -344,7 +358,8 @@ nav button:hover {
     justify-content: left;
 
     gap: 7px;
-    border-radius: 9px;
+    border-radius: 6px;
+    margin-bottom: 5px;
 
     cursor: pointer;
     transition: all 200ms;
@@ -1089,6 +1104,58 @@ input[type='checkbox']:disabled {
 }
 
 #options-window p {
+    margin-top: 10px;
+    color: #b4b5bd;
+    max-width: 90%;
+    text-align: left;
+}
+
+  /*                        */
+ /*   GAME VERSIONS MENU   */
+/*                        */
+
+#versions-cover {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    background-color: #0005;
+    z-index: 99999;
+    overflow: hidden;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+#versions-window {
+    display: flex;
+    flex-direction: column;
+    padding: 15px;
+
+    width: 500px;
+    height: 505px;
+    background-color: var(--prompt-window-color);
+    border-radius: 10px;
+    border: 1.65px solid var(--prompt-window-outline-color);
+}
+
+#versions-window input {
+    width: 70%;
+    background-color: var(--textinput-background);
+    border-radius: 5px;
+    border: 0;
+    color: #fff;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+}
+
+#versions-window h2 {
+    margin: 0;
+    text-align: left;
+}
+
+#versions-window p {
     margin-top: 10px;
     color: #b4b5bd;
     max-width: 90%;

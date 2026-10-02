@@ -33,6 +33,14 @@
             </div>
         </div>
 
+        <div id="versions-cover" style="display: block;">
+            <div id="versions-window"> 
+                <h2>Versions</h2>
+                <p id="versions-text">Download a version.</p> 
+                
+            </div>
+        </div>
+
         <div class="main-content">
 
             <nav>
@@ -57,25 +65,22 @@
                 </div>
 
                 <div id="dropdown-menu" class="mc-dropdown">
-                    <hr class="minecraft-version-hr">
                     <!-- content -->
-                    <div style="overflow-y: scroll; height: 85%; scroll-behavior: smooth;">
+                    <button class="minecraft-dropdown-item">
+                        <img src="images/Minecraft.png">
+                        <div style="display: flex; justify-content: left; flex-direction: column;">
+                            <p style="margin: 0; text-align: left;">Minecraft 26.2.2</p>
+                            <p style="margin: 0; text-align: left; color: #aaa;">26.2.2 — Fabric</p>
+                        </div>
+                    </button>
 
-                        <button class="minecraft-dropdown-item">
-
-                            <img src="images/Minecraft.png">
-                            <div style="display: flex; justify-content: left; flex-direction: column;">
-                                <p style="margin: 0; text-align: left;">Minecraft 26.2.2</p>
-                                <p style="margin: 0; text-align: left; color: #aaa;">26.2.2 — Fabric</p>
-                            </div>
-
-                        </button>
-
-                    </div>
+                    <button class="minecraft-dropdown-item">
+                        <p style="width: 100%; text-align: center;">+ Add Installation</p>
+                    </button>
                 </div>
 
                 <div class="options-partition">
-                    <div id="dropdown" class="minecraft-version-divider">
+                    <div id="dropdown" class="minecraft-version-divider" style="/*display: none;*/">
                         <img src="images/Minecraft.png" style="height: 80%; margin-left: -5px; margin-right: 6px; border-radius: 3px;">
                         <p>Minecraft 26.2.1</p>
                         <svg id="dropdown-arrow" width="32" height="32" viewBox="0 0 24 24" focusable="false" style="fill: #FFF;"><path id="collapse-svg" d="M5.41 7.59L4 9l8 8 8-8-1.41-1.41L12 14.17"></path></svg>
