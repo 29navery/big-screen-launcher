@@ -275,3 +275,16 @@ async function loadVersions() {
 }
 
 document.addEventListener('DOMContentLoaded', loadVersions);
+
+// add installations
+const instCover = document.getElementById('versions-cover');
+const instWindow = document.getElementById('versions-window');
+const addInstButton = document.getElementById('add-inst-button');
+
+addInstButton.addEventListener('click', () => {
+    if (instCover.style.display !== 'none') {
+        instCover.style.setProperty('display', 'none');
+    } else {
+        instCover.style.setProperty('display', 'block');
+    }
+});
