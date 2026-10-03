@@ -71,7 +71,7 @@ app.whenReady().then(() => {
     createWindow();
 
     audioWindow = new BrowserWindow({
-        width: 366,
+        width: 179,
         height: 477,
         resizable: false,
         show: false,
