@@ -2,7 +2,7 @@
     user-select: none;
     -webkit-user-drag: none;
 
-    --button-opacity: 1;
+    --button-opacity: 0;
     --button-offset-x: 33;
     --button-offset-y: 5;
 }
