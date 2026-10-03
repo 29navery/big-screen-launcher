@@ -276,7 +276,7 @@ async function loadVersions() {
 
 document.addEventListener('DOMContentLoaded', loadVersions);
 
-// add installations
+    // add installations
 const instCover = document.getElementById('versions-cover');
 const instWindow = document.getElementById('versions-window');
 const addInstButton = document.getElementById('add-inst-button');
@@ -286,5 +286,15 @@ addInstButton.addEventListener('click', () => {
         instCover.style.setProperty('display', 'none');
     } else {
         instCover.style.setProperty('display', 'block');
+    }
+});
+
+document.addEventListener('click', (event) => {
+    addInstButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        instCover.style.setProperty('display', 'flex');
+    });
+    if (instWindow && !instWindow.contains(event.target) && !addInstButton.contains(event.target)) {
+        instCover.style.setProperty('display', 'none');
     }
 });

@@ -46,6 +46,8 @@
     margin-top: -50px;
 }
 
+ /*   DROPDOWN   */
+
 .mc-dropdown {
     position: absolute;
     background-color: var(--minecraft-version-dropdown-fill-color);
@@ -223,9 +225,7 @@
     pointer-events: none;
 }
 
-  /*                       */
- /*   GAME PAGE BUTTONS   */
-/*                       */
+ /*   BUTTONS   */
 
 #button-container {
     background-color: var(--bg-color);
@@ -262,9 +262,7 @@
     transform: scale(1.025);
 }
 
-/*                       */
- /*   GAME OPTIONS MENU   */
-/*                       */
+ /*   OPTIONS MENU   */
 
 #options-cover {
     width: 100vw;
@@ -314,9 +312,7 @@
     text-align: left;
 }
 
-  /*                        */
- /*   GAME VERSIONS MENU   */
-/*                        */
+ /*   VERSIONS MENU   */
 
 #versions-cover {
     width: 100vw;
