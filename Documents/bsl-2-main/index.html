@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <!-- Custom Context Menu -->
+        <div id="custom-context-menu" class="context-menu" style="display: none;">
+            <ul id="cm-main">
+                <style>
+                    #menu-remove {
+                        color: rgb(202, 64, 64);
+                    }
+                    #menu-remove:hover {
+                        color: #fff;
+                        background-color: rgb(202, 64, 64);
+                    }
+                </style>
+                <li id="menu-launch">Launch</li>
+                <li id="menu-artwork">Change Artwork...</li>
+                <li id="menu-remove">Remove from Library</li>
+            </ul>
+            <ul id="cm-replace-artwork" style="display: none;">
+                <li id="menu-artwork-grid">Grid...</li>
+                <li id="menu-artwork-logo">Logo...</li>
+                <li id="menu-artwork-hero">Hero...</li>
+                <li id="menu-artwork-all">All</li>
+            </ul>
+        </div>
+
+        <!-- name prompt -->
+        <div id="name-prompt-cover" style="display: none;">
+            <div id="name-prompt-window"> 
+                <h2>Enter Game Name</h2>
+                <p>Be as specific as possible or art may appear incorrect.</p> 
+                <input id="name-input-text-field" type="text">
+                <button id="name-input-create-button" class="normal-button">Add</button>
+            </div>
+        </div>
+        <!--                         Notification                  -->
+        <!--    <div class="notification">Update available!</div>  -->
+        <!--                         /Notification                 -->
+
+        <header>
+            <img src="favicon.ico">
+            <p>Big Screen Launcher</p>
+            <p id="version-number" style="font-size: 13px;">v26.0</p>
+        </header>
+
+        <div class="main-content">
+            <nav>
+                <button id="library-button"><img class="rail-button-icon" src="svg/library.svg"></button>
+                <button id="downloads-button"><img class="rail-button-icon" src="svg/download.svg"></button>
+                <button id="settings-button"><img class="rail-button-icon" src="svg/gear.svg"></button>
+                <button id="player-button"><img class="rail-button-icon" src="svg/disc.svg"></button>
+            </nav>
+            <div id="content">
+                <h1 style="text-indent:25px;">Library</h1>
+                <button id="add-game-btn" style="margin-left: 20px; margin-bottom: 10px;" class="preferable-button">Add Your Games</button>
+                <div id="game-grid" class="grid"></div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<!-- Add Test items -->
+<script>
+</script>
+
+<!-- it is REQUIRED that script.js comes first -->
+<script src="script.js"></script>
+<script src="javascript/library.js"></script>

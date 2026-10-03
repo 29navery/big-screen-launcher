@@ -1,0 +1,5 @@
+/node_modules
+/powershell
+/dist
+package-lock.json
+/.vscode

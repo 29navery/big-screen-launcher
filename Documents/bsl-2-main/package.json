@@ -1,0 +1,44 @@
+{
+  "name": "big-screen-launcher",
+  "description": "The better Steam!",
+  "author": "nicky_lul",
+  "version": "26.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --windows"
+  },
+  "build": {
+    "appId": "com.nickylul.BSL",
+    "productName": "Big Screen Launcher",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "29navery",
+        "repo": "BSL-2"
+      }
+    ],
+    "win": {
+      "icon": "assets/app-icon.ico"
+    },
+    "mac": {
+      "icon": "assets/app-icon.icns"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.3.0",
+    "electron-builder": "^26.16.1"
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
+  },
+  "dependencies": {
+    "@eirslett/shoeset": "^0.0.1",
+    "adm-zip": "^0.6.1",
+    "axios": "^1.20.0",
+    "electron-updater": "^6.8.9",
+    "music-metadata": "^11.16.1",
+    "node-unrar-js": "^2.0.2"
+  }
+}
