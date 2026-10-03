@@ -256,7 +256,7 @@ async function getVersions() {
 }
 
 async function loadVersions() {
-    const versionBox = document.getElementById('versions-window');
+    const versionBox = document.getElementById('versions-list');
 
     try {
         const allVersions = await getVersions();
@@ -273,8 +273,6 @@ async function loadVersions() {
         versionBox.textContent = 'Failed to load Minecraft versions.'
     }
 }
-
-document.addEventListener('DOMContentLoaded', loadVersions);
 
     // add installations
 const instCover = document.getElementById('versions-cover');
@@ -293,6 +291,7 @@ document.addEventListener('click', (event) => {
     addInstButton.addEventListener('click', (event) => {
         event.stopPropagation();
         instCover.style.setProperty('display', 'flex');
+        loadVersions();
     });
     if (instWindow && !instWindow.contains(event.target) && !addInstButton.contains(event.target)) {
         instCover.style.setProperty('display', 'none');
