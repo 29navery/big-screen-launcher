@@ -51,7 +51,6 @@ if (updateButton) {
 }
 
 // elements
-const apiKeyInput = document.getElementById('sgdb-api-key-input');
 const startWithWindowsCb = document.getElementById('start-with-windows');
 const showIpodCb = document.getElementById('show-ipod-automatically');
 const keepIpodCb = document.getElementById('keep-ipod-front');
@@ -61,7 +60,6 @@ const noTextInput = document.getElementById('no-button-text-input');
 // auto save
 async function autoSave() {
     const settingsPayload = {
-        apiKey: apiKeyInput ? apiKeyInput.value.trim() : '',
         startWithWindows: startWithWindowsCb ? startWithWindowsCb.checked : false,
         showIpod: showIpodCb ? showIpodCb.checked : false,
         keepIpodOnTop: keepIpodCb ? keepIpodCb.checked : false,
@@ -81,7 +79,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     try {
         const settings = await ipcRenderer.invoke('load-settings');
         if (settings) {
-            if (apiKeyInput) apiKeyInput.value = settings.apiKey || '';
             if (startWithWindowsCb) startWithWindowsCb.checked = !!settings.startWithWindows;
             if (showIpodCb) showIpodCb.checked = !!settings.showIpod;
             if (keepIpodCb) keepIpodCb.checked = !!settings.keepIpodOnTop;
@@ -92,7 +89,6 @@ window.addEventListener('DOMContentLoaded', async () => {
         console.error("Failed to load settings:", err);
     }
 
-    if (apiKeyInput) apiKeyInput.addEventListener('input', autoSave);
     if (startWithWindowsCb) startWithWindowsCb.addEventListener('change', autoSave);
     if (showIpodCb) showIpodCb.addEventListener('change', autoSave);
     if (keepIpodCb) keepIpodCb.addEventListener('change', autoSave);

@@ -38,14 +38,6 @@
                 </div>
 
                 <div class="settings-section">
-                    <h2>SteamGridDB</h2>
-                    <div id="sgdb-content" class="section-content">
-                        <p>API Key</p>
-                        <input type="text" id="sgdb-api-key-input" style="height: 24px; border-radius: 8px;">
-                    </div>
-                </div>
-
-                <div class="settings-section">
                     <h2>Big Screen Launcher</h2>
                     <div id="bsl-content" class="section-content">
                         <div style="display: flex; gap: 5px; flex-direction: row; justify-content: left; align-items: center;">
@@ -90,7 +82,7 @@
         if (!h2) return;
 
         let targetDiv = h2.nextElementSibling;
-        if (targetDiv && targetDiv.matches('#sgdb-content, #bsl-content, #music-player-content')) {
+        if (targetDiv && targetDiv.matches('#bsl-content, #music-player-content')) {
             if (targetDiv.style.display === 'none') {
                 targetDiv.style.setProperty('display', 'block');
             } else {

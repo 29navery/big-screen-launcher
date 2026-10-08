@@ -1,5 +1,11 @@
 // hello I am the electron script
 const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session, net } = require('electron');
+// Only the first process should initialize the launcher.
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+    return;
+}
+
 const { autoUpdater } = require('electron-updater');
 const { spawn } = require('child_process');
 const fs = require('fs');
@@ -25,6 +31,19 @@ let mainWindow;
 let audioWindow;
 let tray = null;
 let isQuitting = false;
+
+function focusMainWindow() {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+        createWindow();
+    }
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+}
+
+app.on('second-instance', () => {
+    app.whenReady().then(focusMainWindow);
+});
 
 autoUpdater.autoDownload = true;
 ipcMain.on('restart-app', () => {
@@ -153,11 +172,7 @@ app.whenReady().then(() => {
         if (mainWindow.isVisible()) mainWindow.hide(); else mainWindow.show();
     });
 
-    app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-            createWindow();
-        }
-    });
+    app.on('activate', focusMainWindow);
 
     applySettings();
 });
@@ -272,7 +287,7 @@ ipcMain.handle('load-settings', () => {
     } catch (err) {
         console.error("Could not load settings:", err);
     }
-    return { apiKey: '' };
+    return {};
 });
 
 ipcMain.handle('save-settings', (event, settingsData) => {
@@ -288,21 +303,6 @@ ipcMain.handle('save-settings', (event, settingsData) => {
         return false;
     }
 });
-
-const DEFAULT_API_KEY = '9d1906739a2fb8b80908934fa3529734';
-function getApiKey() {
-    if (fs.existsSync(settingsFilePath)) {
-        try {
-            const settings = JSON.parse(fs.readFileSync(settingsFilePath, 'utf8'));
-            if (settings.apiKey) return settings.apiKey;
-        } catch (err) {
-            console.error("Error reading settings file:", err);
-        }
-    }
-    return DEFAULT_API_KEY;
-}
-
-
 
 // get the arts
 const WORKER_URL = 'https://api-art-proxy.nicholasavery2.workers.dev';
