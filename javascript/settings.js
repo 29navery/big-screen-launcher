@@ -52,6 +52,7 @@ if (updateButton) {
 
 // elements
 const startWithWindowsCb = document.getElementById('start-with-windows');
+const appSFXCb = document.getElementById('app-sfx');
 const showIpodCb = document.getElementById('show-ipod-automatically');
 const keepIpodCb = document.getElementById('keep-ipod-front');
 const yesTextInput = document.getElementById('yes-button-text-input');
@@ -61,6 +62,7 @@ const noTextInput = document.getElementById('no-button-text-input');
 async function autoSave() {
     const settingsPayload = {
         startWithWindows: startWithWindowsCb ? startWithWindowsCb.checked : false,
+        appSFX: appSFXCb ? appSFXCb.checked : false,
         showIpod: showIpodCb ? showIpodCb.checked : false,
         keepIpodOnTop: keepIpodCb ? keepIpodCb.checked : false,
         noTextInput: noTextInput.value.trim() || 'nah, nevermind',
@@ -80,6 +82,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         const settings = await ipcRenderer.invoke('load-settings');
         if (settings) {
             if (startWithWindowsCb) startWithWindowsCb.checked = !!settings.startWithWindows;
+            if (appSFXCb) appSFXCb.checked = !!settings.appSFX;
             if (showIpodCb) showIpodCb.checked = !!settings.showIpod;
             if (keepIpodCb) keepIpodCb.checked = !!settings.keepIpodOnTop;
             if (noTextInput) noTextInput.value = settings.noTextInput || 'nah, nevermind';
@@ -90,6 +93,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (startWithWindowsCb) startWithWindowsCb.addEventListener('change', autoSave);
+    if (appSFXCb) appSFXCb.addEventListener('change', autoSave);
     if (showIpodCb) showIpodCb.addEventListener('change', autoSave);
     if (keepIpodCb) keepIpodCb.addEventListener('change', autoSave);
     if (yesTextInput) yesTextInput.addEventListener('input', autoSave);

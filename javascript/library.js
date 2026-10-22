@@ -1,5 +1,8 @@
 // sound
-function playSound(fileName) {
+async function playSound(fileName) {
+    const settings = await ipcRenderer.invoke('load-settings');
+    if (!settings.appSFX) return;
+
     const audio = new Audio(`assets/sounds/${fileName}.ogg`);
     audio.volume = 0.5;
     audio.play().catch(err => {

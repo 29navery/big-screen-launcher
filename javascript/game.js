@@ -69,12 +69,16 @@ document.addEventListener('DOMContentLoaded', initGamePage);
 
 // sound
 
-function playSound(fileName) {
-    const audio = new Audio(`assets/sounds/${fileName}.ogg`);
-    audio.volume = 0.5;
-    audio.play().catch(err => {
-        console.log("Audio playback prevented:", err);
-    });
+async function playSound(fileName) {
+    const settings = await ipcRenderer.invoke('load-settings');
+
+    if (settings.appSFX) {
+        const audio = new Audio(`assets/sounds/${fileName}.ogg`);
+        audio.volume = 0.5;
+        audio.play().catch(err => {
+            console.log("Audio playback prevented:", err);
+        });
+    }
 }
 
 // launch
