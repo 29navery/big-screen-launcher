@@ -27,6 +27,7 @@
     --checkbox-accent-color: #675fff;
 
     --textinput-background: #1f1f20;
+    --textinput-focus-color: #675fff6e;
     --prompt-window-color: #222326;
     --prompt-window-outline-color: #393a3e;
 
@@ -376,6 +377,12 @@ img.grid-item {
     color: #fff;
     padding: 0 10px;
     height: 32px;
+    outline: 0;
+    transition: all 150ms;
+}
+
+.settings-section input:focus {
+    outline: 3px solid var(--textinput-focus-color);
 }
 
 /* checkbox */
