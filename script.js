@@ -1,4 +1,16 @@
-const { ipcRenderer } = require('electron')
+const { ipcRenderer } = require('electron');
+const path = require("node:path");
+const fs = require("node:fs");
+
+const filePath = path.join(__dirname, "app-data.json");
+const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+const beta = data.beta;
+
+document.addEventListener("DOMContentLoaded", () => {
+    if (!beta) {
+        document.getElementById("report-button").remove()
+    }
+});
 
 // rail stuff
 document.addEventListener('click', (e) => {
@@ -6,11 +18,13 @@ document.addEventListener('click', (e) => {
     const downloadsBtn = e.target.closest('#downloads-button');
     const settingsBtn = e.target.closest('#settings-button');
     const playerBtn = e.target.closest('#player-button');
+    const reportBtn = e.target.closest('#report-button');
 
     if (libraryBtn) window.location.href = 'index.html';
     if (downloadsBtn) window.location.href = 'downloads.html';
     if (settingsBtn) window.location.href = 'settings.html';
     if (playerBtn) window.location.href = 'music.html';
+    if (reportBtn) window.location.href = 'report.html';
 
     const prevBtn = e.target.closest('#sngctrl-prev');
     const playPauseBtn = e.target.closest('#sngctrl-play-pause');
