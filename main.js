@@ -499,7 +499,7 @@ ipcMain.handle('launch-game-process', async (event, game) => {
     let launchPath = exePath;
     let launchArgs = [];
     if (game.type === 'emu') {
-        const flags = { xenia: [], dolphin: ['-e'], cemu: ['-g'], ryujinx: [] };
+        const flags = { xenia: [], dolphin: ['-e'], cemu: ['-g'], ryujinx: [], yuzu: [], rpcs3: [], shadps4: ['-g'] };
         if (!Object.hasOwn(flags, game.emulator)) throw new Error('Choose a supported emulator for this game.');
         const savedSettings = fs.existsSync(settingsFilePath) ? JSON.parse(fs.readFileSync(settingsFilePath, 'utf8')) : {};
         launchPath = (savedSettings[game.emulator + 'DirInput'] || '').trim();

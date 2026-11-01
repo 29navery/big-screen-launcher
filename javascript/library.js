@@ -88,7 +88,7 @@ addGameButton.addEventListener('click', async () => {
     try {
     let gameType = 'windows';
     let emulator = '';
-    const configured = ['xenia', 'dolphin', 'cemu', 'ryujinx'].filter(id => settings[id + 'DirInput']?.trim());
+    const configured = ['xenia', 'dolphin', 'cemu', 'ryujinx', 'yuzu', 'rpcs3', 'shadps4'].filter(id => settings[id + 'DirInput']?.trim());
     const askForGameType = configured.length > 0;
 
 
@@ -100,7 +100,7 @@ addGameButton.addEventListener('click', async () => {
             const confirm = document.getElementById('import-emulator-confirm');
             let selected = configured[0] || null;
             const updateSelection = () => {
-                for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+                for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx', 'yuzu', 'rpcs3', 'shadps4']) {
                     const button = document.getElementById('emu-opt-' + id);
                     button.disabled = !configured.includes(id);
                     button.classList.toggle('selected', id === selected);
@@ -109,7 +109,7 @@ addGameButton.addEventListener('click', async () => {
                 }
                 confirm.disabled = !selected;
             };
-            for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+            for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx', 'yuzu', 'rpcs3', 'shadps4']) {
                 document.getElementById('emu-opt-' + id).onclick = () => {
                     if (!configured.includes(id)) return;
                     selected = id;

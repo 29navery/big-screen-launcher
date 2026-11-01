@@ -61,6 +61,9 @@ const xeniaDirInput = document.getElementById('xenia-directory');
 const dolphinDirInput = document.getElementById('dolphin-directory');
 const cemuDirInput = document.getElementById('cemu-directory');
 const ryujinxDirInput = document.getElementById('ryujinx-directory');
+const yuzuDirInput = document.getElementById('yuzu-directory');
+const rpcs3DirInput = document.getElementById('rpcs3-directory');
+const shadps4DirInput = document.getElementById('shadps4-directory');
 
 // auto save
 async function autoSave() {
@@ -74,7 +77,10 @@ async function autoSave() {
         xeniaDirInput: xeniaDirInput.value.trim() || '',
         dolphinDirInput: dolphinDirInput.value.trim() || '',
         cemuDirInput: cemuDirInput.value.trim() || '',
-        ryujinxDirInput: ryujinxDirInput.value.trim() || ''
+        ryujinxDirInput: ryujinxDirInput.value.trim() || '',
+        yuzuDirInput: yuzuDirInput.value.trim() || '',
+        rpcs3DirInput: rpcs3DirInput.value.trim() || '',
+        shadps4DirInput: shadps4DirInput.value.trim() || ''
     };
 
     try {
@@ -99,6 +105,9 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (dolphinDirInput) dolphinDirInput.value = settings.dolphinDirInput || '';
             if (cemuDirInput) cemuDirInput.value = settings.cemuDirInput || '';
             if (ryujinxDirInput) ryujinxDirInput.value = settings.ryujinxDirInput || '';
+            if (yuzuDirInput) yuzuDirInput.value = settings.yuzuDirInput || '';
+            if (rpcs3DirInput) rpcs3DirInput.value = settings.rpcs3DirInput || '';
+            if (shadps4DirInput) shadps4DirInput.value = settings.shadps4DirInput || '';
         }
     } catch (err) {
         console.error("Failed to load settings:", err);
@@ -114,9 +123,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (dolphinDirInput) dolphinDirInput.addEventListener('input', autoSave);
     if (cemuDirInput) cemuDirInput.addEventListener('input', autoSave);
     if (ryujinxDirInput) ryujinxDirInput.addEventListener('input', autoSave);
+    if (yuzuDirInput) yuzuDirInput.addEventListener('input', autoSave);
+    if (rpcs3DirInput) rpcs3DirInput.addEventListener('input', autoSave);
+    if (shadps4DirInput) shadps4DirInput.addEventListener('input', autoSave);
 });
 // Locate emulator executables and persist the selected path.
-for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx', 'yuzu', 'rpcs3', 'shadps4']) {
     document.getElementById(id + '-directory-button').addEventListener('click', async () => {
         try {
             const selected = await ipcRenderer.invoke('dialog:open-emulator-file');
