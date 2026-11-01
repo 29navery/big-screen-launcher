@@ -685,7 +685,7 @@ input[type='checkbox']:disabled {
     color: #ccc;
 }
 
-#emu-selector > button.selected, #emu-selector > button:enabled:hover {
+#emu-selector > button.selected, #emu-selector > button.selected:hover {
     background-color: var(--important-button-color);
     border-color: var(--rail-button-outline-color-selected);
     color: #fff;
