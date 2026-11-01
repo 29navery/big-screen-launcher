@@ -184,11 +184,19 @@ app.on('window-all-closed', () => {
 });
 
 // shortcuts & dialog handlers
-ipcMain.handle('dialog:open-game-file', async () => {
+ipcMain.handle('dialog:open-emulator-file', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
-        title: 'Select Game Executable',
+        title: 'Select Emulator Executable', properties: ['openFile'],
+        filters: [{ name: 'Executable', extensions: ['exe'] }]
+    });
+    return canceled ? null : filePaths[0];
+});
+
+ipcMain.handle('dialog:open-game-file', async (event, emulator) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+        title: emulator ? 'Select Game ROM or Disc Image' : 'Select Game Executable',
         properties: ['openFile'],
-        filters: [{ name: 'Executables & Shortcuts', extensions: ['exe', 'lnk', 'url'] }]
+        filters: emulator ? [{ name: 'Game Files', extensions: ['*'] }] : [{ name: 'Executables & Shortcuts', extensions: ['exe', 'lnk', 'url'] }]
     });
 
     return canceled ? null : filePaths[0];
@@ -488,6 +496,19 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         throw new Error(`Executable file not found at: ${exePath}`);
     }
 
+    let launchPath = exePath;
+    let launchArgs = [];
+    if (game.type === 'emu') {
+        const flags = { xenia: [], dolphin: ['-e'], cemu: ['-g'], ryujinx: [] };
+        if (!Object.hasOwn(flags, game.emulator)) throw new Error('Choose a supported emulator for this game.');
+        const savedSettings = fs.existsSync(settingsFilePath) ? JSON.parse(fs.readFileSync(settingsFilePath, 'utf8')) : {};
+        launchPath = (savedSettings[game.emulator + 'DirInput'] || '').trim();
+        if (!launchPath || !fs.existsSync(launchPath) || !fs.statSync(launchPath).isFile()) {
+            throw new Error('Locate the ' + game.emulator + ' executable in Settings first.');
+        }
+        launchArgs = [...flags[game.emulator], exePath];
+    }
+
     if (activeProcesses.has(exePath)) {
         console.log("Game is already running.");
         return { success: true };
@@ -497,12 +518,17 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         // Broadcast 'starting' globally
         broadcastStatus(exePath, 'starting');
 
-        const child = spawn(exePath, [], { 
+        const child = spawn(launchPath, launchArgs, { 
             detached: true, 
             stdio: 'ignore',
-            cwd: path.dirname(exePath) 
+            cwd: path.dirname(launchPath) 
         });
         
+        child.on('error', error => {
+            activeProcesses.delete(exePath);
+            broadcastStatus(exePath, 'stopped');
+            dialog.showErrorBox('Could not launch game', error.message);
+        });
         child.unref();
         activeProcesses.set(exePath, child);
 

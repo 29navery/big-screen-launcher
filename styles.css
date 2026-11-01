@@ -518,6 +518,73 @@ input[type='checkbox']:disabled {
     color: #787981;
 }
 
+  /*                  */
+ /*  IMPORT PROMPT   */
+/*                  */
+
+#import-prompt-cover {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    background-color: #0005;
+    z-index: 99999;
+    overflow: hidden;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+#emulator-prompt-cover {
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    background-color: #0005;
+    z-index: 99999;
+    overflow: hidden;
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+}
+
+#emulator-prompt-cover select {
+    border-radius: 0.5em;
+    height: 28px;
+    width: 104px;
+    text-indent: 5px;
+    background-color: #131314;
+    color: #fff;
+    margin-bottom: 12px;
+}
+
+#emulator-prompt-cover select:focus {
+    outline: 0;
+}
+
+#emulator-prompt-cover option {
+    background-color: #131314;
+    border-radius: 0.5em;
+}
+
+#import-prompt-window,
+#emulator-prompt-window {
+    display: flex;
+    flex-direction: column;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+    justify-items: center;
+
+    width: 450px;
+    height: 205px;
+    background-color: var(--prompt-window-color);
+    border-radius: 10px;
+    border: 1.65px solid var(--prompt-window-outline-color);
+}
+
   /*                    */
  /*  DELETION PROMPT   */
 /*                    */
@@ -569,4 +636,62 @@ input[type='checkbox']:disabled {
     margin-top: 10px;
     color: #787981;
     max-width: 90%;
+}
+
+
+
+
+#emu-selector {
+    display: flex;
+    flex-flow: row nowrap;
+
+    justify-content: center;
+    align-items: center;
+
+    border: 1px solid #83858e;
+    border-radius: 0.7em;
+
+    height: 28px;
+    background-color: #131314;
+    padding: 6px;
+
+    gap: 5px;
+
+    margin-bottom: 8px;
+}
+
+#emu-selector > button {
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-content: center;
+
+    background-color: transparent;
+
+    padding: 5px 7px;
+    
+    border: 0;
+    border-radius: 0.4em;
+
+    transition: all 100ms;
+}
+
+#emu-selector > button:enabled:hover {
+    background-color: #353537;
+    cursor: pointer;
+}
+
+#emu-selector > button:disabled {
+    color: #ccc;
+}
+
+#emu-selector > button.selected, #emu-selector > button:enabled:hover {
+    background-color: var(--important-button-color);
+    border-color: var(--rail-button-outline-color-selected);
+    color: #fff;
+}
+
+#emu-selector > button:focus-visible {
+    outline: 2px solid var(--rail-button-outline-color-selected);
+    outline-offset: 3px;
 }

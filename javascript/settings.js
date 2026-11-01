@@ -115,3 +115,14 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (cemuDirInput) cemuDirInput.addEventListener('input', autoSave);
     if (ryujinxDirInput) ryujinxDirInput.addEventListener('input', autoSave);
 });
+// Locate emulator executables and persist the selected path.
+for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+    document.getElementById(id + '-directory-button').addEventListener('click', async () => {
+        try {
+            const selected = await ipcRenderer.invoke('dialog:open-emulator-file');
+            if (!selected) return;
+            document.getElementById(id + '-directory').value = selected;
+            await autoSave();
+        } catch (error) { window.alert('Could not locate emulator: ' + error.message); }
+    });
+}

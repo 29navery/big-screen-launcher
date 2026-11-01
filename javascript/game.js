@@ -56,13 +56,6 @@ async function initGamePage() {
         await ipcRenderer.invoke('save-games', games);
     }
 
-    const playButton = document.querySelector('.hero-container .preferable-button');
-    if (playButton) {
-        playButton.addEventListener('click', () => {
-            console.log(`Launching game: ${game.name} at ${game.path}`);
-            ipcRenderer.invoke('launch-game-process', game.path);
-        });
-    }
 }
 
 document.addEventListener('DOMContentLoaded', initGamePage);
@@ -85,12 +78,7 @@ async function playSound(fileName) {
 
 const launchButton = document.getElementById('play-button');
 
-launchButton.addEventListener('click', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameIndex = urlParams.get('index');
-    launchGame(gameIndex);
-    playSound('maximize_007');
-});
+
 
 async function launchGame(index) {
     const games = await ipcRenderer.invoke('load-games');
@@ -124,6 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     launchButton.onclick = async () => {
+        try {
         const liveStatus = await ipcRenderer.invoke('get-game-status', game.path);
         
         if (liveStatus === 'running') {
@@ -131,6 +120,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             await ipcRenderer.invoke('launch-game-process', game);
         }
+        playSound('maximize_007');
+        } catch (error) { window.alert('Could not launch game: ' + error.message); }
     };
 });
 

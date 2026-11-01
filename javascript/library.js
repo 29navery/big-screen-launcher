@@ -10,6 +10,29 @@ async function playSound(fileName) {
     });
 }
 
+// import prompt
+const importPromptContainer = document.getElementById('import-prompt-cover');
+const importPromptWindowsButton = document.getElementById('import-windows-game');
+const importPromptEmuButton = document.getElementById('import-emu-game');
+
+function promptForGameType() {
+    return new Promise((resolve) => {
+        importPromptContainer.style.setProperty('display', 'flex');
+        document.getElementById('import-game-cancel').onclick = () => {
+            importPromptContainer.style.display = 'none';
+            resolve(null);
+        };
+        importPromptWindowsButton.onclick = () => {
+            importPromptContainer.style.display = 'none';
+            resolve('windows')
+        };
+        importPromptEmuButton.onclick = () => {
+            importPromptContainer.style.display = 'none';
+            resolve('emu')
+        };
+    });
+}
+
 // games
 const addGameButton = document.getElementById('add-game-btn');
 
@@ -59,7 +82,53 @@ async function renderGamesGrid() {
 renderGamesGrid();
 
 addGameButton.addEventListener('click', async () => {
-    const filePath = await ipcRenderer.invoke('dialog:open-game-file');
+    const settings = await ipcRenderer.invoke('load-settings');
+    if (addGameButton.disabled) return;
+    addGameButton.disabled = true;
+    try {
+    let gameType = 'windows';
+    let emulator = '';
+    const configured = ['xenia', 'dolphin', 'cemu', 'ryujinx'].filter(id => settings[id + 'DirInput']?.trim());
+    const askForGameType = configured.length > 0;
+
+
+    if (askForGameType) {
+        gameType = await promptForGameType();
+        if (!gameType) return;
+        if (gameType === 'emu') {
+            const cover = document.getElementById('emulator-prompt-cover');
+            const confirm = document.getElementById('import-emulator-confirm');
+            let selected = configured[0] || null;
+            const updateSelection = () => {
+                for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+                    const button = document.getElementById('emu-opt-' + id);
+                    button.disabled = !configured.includes(id);
+                    button.classList.toggle('selected', id === selected);
+                    button.setAttribute('aria-pressed', String(id === selected));
+                    button.title = button.disabled ? 'Set the executable path in Settings to enable ' + button.textContent : '';
+                }
+                confirm.disabled = !selected;
+            };
+            for (const id of ['xenia', 'dolphin', 'cemu', 'ryujinx']) {
+                document.getElementById('emu-opt-' + id).onclick = () => {
+                    if (!configured.includes(id)) return;
+                    selected = id;
+                    updateSelection();
+                };
+            }
+            updateSelection();
+            cover.style.display = 'flex';
+            document.getElementById('emu-opt-' + selected)?.focus();
+            emulator = await new Promise(resolve => {
+                confirm.onclick = () => { if (selected) resolve(selected); };
+                document.getElementById('import-emulator-cancel').onclick = () => resolve(null);
+            });
+            cover.style.display = 'none';
+            if (!emulator) return;
+        }
+    }
+
+    const filePath = await ipcRenderer.invoke('dialog:open-game-file', emulator);
     if (!filePath) return;
 
     const fileName = filePath.split('\\').pop().split('/').pop();
@@ -77,7 +146,9 @@ addGameButton.addEventListener('click', async () => {
     const newGame = {
         name: gameName,
         path: filePath,
-        cover: artworkUrl || ''
+        cover: artworkUrl || '',
+        type: gameType,
+        emulator
     };
 
     let savedGames = await ipcRenderer.invoke('load-games');
@@ -85,6 +156,12 @@ addGameButton.addEventListener('click', async () => {
     await ipcRenderer.invoke('save-games', savedGames);
 
     renderGamesGrid();
+    } catch (error) {
+        console.error(error);
+        window.alert('Could not import game: ' + error.message);
+    } finally {
+        addGameButton.disabled = false;
+    }
 });
 
 // name prompt
