@@ -57,6 +57,10 @@ const showIpodCb = document.getElementById('show-ipod-automatically');
 const keepIpodCb = document.getElementById('keep-ipod-front');
 const yesTextInput = document.getElementById('yes-button-text-input');
 const noTextInput = document.getElementById('no-button-text-input');
+const xeniaDirInput = document.getElementById('xenia-directory');
+const dolphinDirInput = document.getElementById('dolphin-directory');
+const cemuDirInput = document.getElementById('cemu-directory');
+const ryujinxDirInput = document.getElementById('ryujinx-directory');
 
 // auto save
 async function autoSave() {
@@ -66,7 +70,11 @@ async function autoSave() {
         showIpod: showIpodCb ? showIpodCb.checked : false,
         keepIpodOnTop: keepIpodCb ? keepIpodCb.checked : false,
         noTextInput: noTextInput.value.trim() || 'nah, nevermind',
-        yesTextInput: yesTextInput.value.trim() || 'yeah, it sucked anyway'
+        yesTextInput: yesTextInput.value.trim() || 'yeah, it sucked anyway',
+        xeniaDirInput: xeniaDirInput.value.trim() || '',
+        dolphinDirInput: dolphinDirInput.value.trim() || '',
+        cemuDirInput: cemuDirInput.value.trim() || '',
+        ryujinxDirInput: ryujinxDirInput.value.trim() || ''
     };
 
     try {
@@ -87,6 +95,10 @@ window.addEventListener('DOMContentLoaded', async () => {
             if (keepIpodCb) keepIpodCb.checked = !!settings.keepIpodOnTop;
             if (noTextInput) noTextInput.value = settings.noTextInput || 'nah, nevermind';
             if (yesTextInput) yesTextInput.value = settings.yesTextInput || 'yeah, it sucked anyway';
+            if (xeniaDirInput) xeniaDirInput.value = settings.xeniaDirInput || '';
+            if (dolphinDirInput) dolphinDirInput.value = settings.dolphinDirInput || '';
+            if (cemuDirInput) cemuDirInput.value = settings.cemuDirInput || '';
+            if (ryujinxDirInput) ryujinxDirInput.value = settings.ryujinxDirInput || '';
         }
     } catch (err) {
         console.error("Failed to load settings:", err);
@@ -98,4 +110,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (keepIpodCb) keepIpodCb.addEventListener('change', autoSave);
     if (yesTextInput) yesTextInput.addEventListener('input', autoSave);
     if (noTextInput) noTextInput.addEventListener('input', autoSave);
+    if (xeniaDirInput) xeniaDirInput.addEventListener('input', autoSave);
+    if (dolphinDirInput) dolphinDirInput.addEventListener('input', autoSave);
+    if (cemuDirInput) cemuDirInput.addEventListener('input', autoSave);
+    if (ryujinxDirInput) ryujinxDirInput.addEventListener('input', autoSave);
 });

@@ -6,6 +6,7 @@
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="/stylesheets/settings.css">
     </head>
     <body>
         <header>
@@ -33,9 +34,8 @@
 
                 <div class="settings-section">
                     <h2>Themes</h2>
-                    <p></p>
-                    <div id="directory-list"></div>
-                    <button class="preferable-button">Import Theme</button>
+                    <button class="preferable-button" disabled="true">Import Theme</button>
+                    <p style="margin-bottom: 0; font-size: 14px; color: #ccc;">Themes are not supported yet..</p>
                 </div>
 
                 <div class="settings-section">
@@ -73,6 +73,36 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="settings-section">
+                    <h2>Emulators</h2>
+                    <div class="directory-list">
+                        <p>Xenia</p>
+                        <div>
+                            <input type="text" id="xenia-directory" class="directory-input">
+                            <button id="xenia-directory-button" class="normal-button">Locate</button>
+                        </div>
+
+                        <p>Dolphin</p>
+                        <div>
+                            <input type="text" id="dolphin-directory" class="directory-input">
+                            <button id="dolphin-directory-button" class="normal-button">Locate</button>
+                        </div>
+
+                        <p>Cemu</p>
+                        <div>
+                            <input type="text" id="cemu-directory" class="directory-input">
+                            <button id="cemu-directory-button" class="normal-button">Locate</button>
+                        </div>
+
+                        <p>Ryujinx</p>
+                        <div>
+                            <input type="text" id="ryujinx-directory" class="directory-input">
+                            <button id="ryujinx-directory-button" class="normal-button">Locate</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </body>

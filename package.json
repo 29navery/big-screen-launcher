@@ -37,7 +37,7 @@
     "@eirslett/shoeset": "^0.0.1",
     "adm-zip": "^0.6.1",
     "axios": "^1.20.0",
-    "electron-updater": "^6.8.9",
+    "electron-updater": "^6.8.11",
     "music-metadata": "^11.16.1",
     "node-unrar-js": "^2.0.2"
   }

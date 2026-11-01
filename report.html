@@ -9,30 +9,6 @@
         <link rel="stylesheet" href="stylesheets/report.css">
     </head>
     <body>
-        <!-- Custom Context Menu -->
-        <div id="custom-context-menu" class="context-menu" style="display: none;">
-            <ul id="cm-main">
-                <style>
-                    #menu-remove {
-                        color: rgb(202, 64, 64);
-                    }
-                    #menu-remove:hover {
-                        color: #fff;
-                        background-color: rgb(202, 64, 64);
-                    }
-                </style>
-                <li id="menu-launch">Launch</li>
-                <li id="menu-artwork">Refresh Artwork...</li>
-                <li id="menu-remove">Remove from Library</li>
-            </ul>
-            <ul id="cm-replace-artwork" style="display: none;">
-                <li id="menu-artwork-grid">Grid...</li>
-                <li id="menu-artwork-logo">Logo...</li>
-                <li id="menu-artwork-hero">Hero...</li>
-                <li id="menu-artwork-all">All</li>
-            </ul>
-        </div>
-
         <!-- name prompt -->
         <div id="name-prompt-cover" style="display: none;">
             <div id="name-prompt-window"> 
@@ -42,10 +18,7 @@
                 <button id="name-input-create-button" class="normal-button">Add</button>
             </div>
         </div>
-        <!--                         Notification                  -->
-        <!--    <div class="notification">Update available!</div>  -->
-        <!--                         /Notification                 -->
-
+        
         <header>
             <img src="favicon.ico">
             <p>Big Screen Launcher</p>
@@ -62,8 +35,9 @@
             </nav>
             <div id="content">
                 <h1>Report</h1>
-                <p>What part of the app are you reporting?</p>
+                <p>* What part of the app are you reporting?</p>
                 <select id="part-dropdown">
+                    <option value=""></option>
                     <option value="library">The Library</option>
                     <option value="game">The Game Page</option>
                     <option value="downloads">The Downloads Page</option>
@@ -75,8 +49,9 @@
                 </select>
                 <input id="other-input" style="display: none;">
                 <br>
-                <p>What's the issue you're encountering with it?</p>
+                <p>* What's the issue you're encountering with it?</p>
                 <textarea id="issue-description"></textarea>
+                <p style="font-size: 11px; margin-top: 0;"><span id="char-counter">0</span>/5000</p>
                 <button id="submit-button" class="preferable-button">Submit</button>
             </div>
         </div>

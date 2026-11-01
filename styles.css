@@ -305,16 +305,22 @@ img.grid-item {
     border: 1px solid #fff5;
     padding: 0 20px;
     height: 40px;
-    cursor: pointer;
     justify-content: center;
     align-content: center;
     text-decoration: none;
-    transition: all 200ms;
+    transition: all 150ms;
 }
 
-.preferable-button:hover {
+.preferable-button:disabled {
+    background-color: #333;
+    color: #ccc;
+    transition: all 0ms;
+}
+
+.preferable-button:enabled:hover {
     box-shadow: #0003 5px 5px 20px;
     transform: scale(1.025);
+    cursor: pointer;
 }
 
 .normal-button {

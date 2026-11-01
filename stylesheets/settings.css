@@ -1,0 +1,30 @@
+.directory-input {
+    background-color: black;
+    width: 100%;
+    height: 32px;
+    border-radius: 0.6em;
+}
+
+.directory-list {
+    display: flex;
+    flex-flow: column nowrap;
+}
+
+.directory-list > p {
+    margin-bottom: 5px;
+    text-indent: 7px;
+    color: #ccc;
+}
+
+.directory-list > div {
+    display: flex;
+    flex-flow: row nowrap;
+    gap: 10px;
+}
+
+.directory-list .normal-button {
+    margin: 0;
+    height: 32px;
+    border-radius: 0.6em;
+    font-size: 13px;
+}
