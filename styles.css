@@ -639,6 +639,13 @@ input[type='checkbox']:disabled {
 }
 
 
+input {
+    outline: 0 solid var(--textinput-focus-color);
+    transition: all 150ms;
+}
+input:focus {
+    outline: 5px solid var(--textinput-focus-color);
+}
 
 
 #emu-selector {
