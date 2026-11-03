@@ -280,18 +280,6 @@
     justify-items: center;
 }
 
-#options-window {
-    display: flex;
-    flex-direction: column;
-    padding: 15px;
-
-    width: 500px;
-    height: 505px;
-    background-color: var(--prompt-window-color);
-    border-radius: 10px;
-    border: 1.65px solid var(--prompt-window-outline-color);
-}
-
 #options-window input {
     width: 70%;
     background-color: var(--textinput-background);
@@ -302,19 +290,12 @@
     margin-bottom: 5px;
 }
 
-#options-window h2 {
+.window h2 {
     margin: 0;
     text-align: left;
 }
 
-#options-window p {
-    margin-top: 10px;
-    color: #b4b5bd;
-    max-width: 90%;
-    text-align: left;
-}
-
-#options-window input {
+.window input {
     background-color: var(--textinput-background);
 
     width: 95%;
@@ -326,13 +307,44 @@
     transition: all 150ms;
 }
 
-#options-window input:focus {
+.window input:focus {
     outline: 3px solid var(--textinput-focus-color);
 }
 
 /*   VERSIONS MENU   */
 
-#versions-cover {
+.window input {
+    width: 70%;
+    background-color: var(--textinput-background);
+    border-radius: 5px;
+    border: 0;
+    color: #fff;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+}
+
+.window h2 {
+    margin: 0;
+    text-align: left;
+}
+
+#versions-window p {
+    margin-top: 10px;
+    color: #b4b5bd;
+    max-width: 90%;
+    text-align: left;
+}
+
+/*  FLAGS TUT MENU   */
+
+#tut-cover p {
+    margin: 2px;
+}
+
+
+/*  WINDOWS AND COVER  */
+
+.cover {
     width: 100vw;
     height: 100vh;
     position: absolute;
@@ -341,12 +353,11 @@
     overflow: hidden;
     display: flex;
     align-content: center;
-    justify-content: center;
-    align-items: center;
     justify-items: center;
+    align-items: center;
 }
 
-#versions-window {
+.window {
     display: flex;
     flex-direction: column;
     padding: 15px;
@@ -359,26 +370,4 @@
 
     overflow-x: hidden;
     overflow-y: scroll;
-}
-
-#versions-window input {
-    width: 70%;
-    background-color: var(--textinput-background);
-    border-radius: 5px;
-    border: 0;
-    color: #fff;
-    padding: 5px 10px;
-    margin-bottom: 5px;
-}
-
-#versions-window h2 {
-    margin: 0;
-    text-align: left;
-}
-
-#versions-window p {
-    margin-top: 10px;
-    color: #b4b5bd;
-    max-width: 90%;
-    text-align: left;
 }

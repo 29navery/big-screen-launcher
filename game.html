@@ -16,7 +16,7 @@
             <p id="version-number" style="font-size: 13px;">v26.0</p>
         </header>
 
-        <div id="deletion-prompt-cover" style="display: none;">
+        <div id="deletion-prompt-cover" class="cover" style="display: none;">
             <div id="deletion-prompt-window"> 
                 <h2>Are you sure?</h2>
                 <p id="deletion-prompt-text">Removing the game from your library will not delete the game files.</p> 
@@ -27,14 +27,25 @@
             </div>
         </div>
 
-        <div id="options-cover" style="display: block;">
-            <div id="options-window"> 
+        <div id="tut-cover" class="cover" style="display: none;">
+            <div id="tut-window" class="window">
+                <h2 style="margin-top: 10px;">Simple Emulator Launch Flags</h2>
+                <h3 id="xenia">Xenia</h3>
+                <p><code>--fullscreen</code> launches the game in fullscreen.</p>
+                <p><code>--gpu=...</code> changes the render engine.<br> <span style="font-size: 15px; color: #ccc;"> &nbsp; &nbsp; &nbsp; > &nbsp; <code>3d12</code> is the DirectX12 render engine<br> &nbsp; &nbsp; &nbsp; > &nbsp; <code>vulkan</code> is the Vulkan render engine</span></p>
+                <p><code>--hid=...</code> changes the input backend <br> <span style="font-size: 15px; color: #ccc;"> &nbsp; &nbsp; &nbsp; > &nbsp; <code>any</code> just uses Windows gamepad input <br> &nbsp; &nbsp; &nbsp; > &nbsp; <code>xinput</code> is the Xbox controller input<br> &nbsp; &nbsp; &nbsp; > &nbsp; <code>sdl</code> is a general controller input engine, for more than Xbox</span> </p>
+                <p><code>--discord=true/false</code> enables &amp; disables the discord rich presence. </p>
+            </div>
+        </div>
+
+        <div id="options-cover" class="cover" style="display: none;">
+            <div id="options-window" class="window">
                 <h2>Options</h2>
                 <p>Edit the options and metadata of this game.</p> 
                 
                 <p>Launch options</p>
                 <input id="launch-options-input" type="text">
-                <a style="display: flex; align-items: center;"><span class="material-symbols-outlined">info</span><div style="width: 5px"></div>Launch flags for emu games</a>
+                <a id="tut-link" style="display: flex; align-items: center;"><span class="material-symbols-outlined">info</span><div style="width: 5px"></div>Launch flags for emu games</a>
                 <br>
                 <div style="display: flex; justify-content: space-between; flex-flow: row nowrap; gap: 20px; align-items: center; margin-top: 20px;">
                     <p style="margin: 0;">Installed files...</p>
@@ -43,8 +54,8 @@
             </div>
         </div>
 
-        <div id="versions-cover" style="display: none;">
-            <div id="versions-window"> 
+        <div id="versions-cover" class="cover" style="display: none;">
+            <div id="versions-window" class="window"> 
                 <h2>Versions</h2>
                 <p id="versions-text">Download a version.</p> 
                 <div id="versions-list"></div>
@@ -116,7 +127,7 @@
 
 
 <style>
-    .normal-button {
+    #options-window .normal-button {
         width: fit-content;
         margin: 0;
         border-radius: 0.35em;

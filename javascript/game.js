@@ -204,22 +204,16 @@ favorite.addEventListener('click', () => {
 
 // options
 const optionsCover = document.getElementById('options-cover');
-const optionsWindow = document.getElementById('options-window');
 
 options.addEventListener('click', () => {
-    optionsCover.style.setProperty('display', 'block');
+    optionsCover.style.setProperty('display', 'flex');
 });
 
-document.addEventListener('click', (event) => {
-    options.addEventListener('click', (event) => {
-        event.stopPropagation();
-        optionsCover.style.setProperty('display', 'flex');
-    });
-    if (optionsWindow && !optionsWindow.contains(event.target) && !options.contains(event.target)) {
+optionsCover.addEventListener('click', (event) => {
+    if (event.target === optionsCover) {
         optionsCover.style.setProperty('display', 'none');
     }
 });
-
 
 // folder
 folder.addEventListener('click', async () => {
@@ -324,5 +318,32 @@ document.addEventListener('click', (event) => {
     });
     if (instWindow && !instWindow.contains(event.target) && !addInstButton.contains(event.target)) {
         instCover.style.setProperty('display', 'none');
+    }
+});
+
+
+
+// tut page
+//const params = new URLSearchParams(window.location.search);
+//const flagTut = params.get("flags-tut") === "true";
+
+const tutCover = document.getElementById("tut-cover");
+const tutWindow = document.getElementById("tut-window");
+
+const link = document.getElementById("tut-link");
+link.addEventListener("click", () => {
+    tutCover.style.display = "block";
+    optionsCover.style.display = "none";
+});
+
+//if (!flagTut) {
+//    tutCover.style.display = "none";
+//} else {
+//    tutCover.style.display = "block";
+//}
+
+tutCover.addEventListener('click', (event) => {
+    if (event.target === tutCover) {
+        tutCover.style.setProperty('display', 'none');
     }
 });
