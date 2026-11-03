@@ -52,8 +52,13 @@ async function initGamePage() {
     }
 
     if (needsSave) {
-        games[gameIndex] = game;
-        await ipcRenderer.invoke('save-games', games);
+        const latestGames = await ipcRenderer.invoke('load-games');
+        const latest = latestGames.find(item => item.path === game.path);
+        if (latest) {
+            if (game.hero) latest.hero = game.hero;
+            if (game.logo) latest.logo = game.logo;
+            await ipcRenderer.invoke('save-games', latestGames);
+        }
     }
 
 }
@@ -102,6 +107,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    const launchOptionsInput = document.getElementById('launch-options-input');
+    let launchOptionsSave = Promise.resolve();
+    if (launchOptionsInput) {
+        launchOptionsInput.value = game.launchOptions || '';
+        launchOptionsInput.addEventListener('input', () => {
+            const value = launchOptionsInput.value;
+            game.launchOptions = value;
+            launchOptionsSave = launchOptionsSave.catch(() => {}).then(async () => {
+                await ipcRenderer.invoke('save-game-launch-options', game.path, value);
+            });
+            launchOptionsSave.catch(error => {
+                console.error('Could not save launch options:', error);
+                window.alert('Could not save launch options: ' + error.message);
+            });
+        });
+    }
+
     const currentStatus = await ipcRenderer.invoke('get-game-status', game.path);
     updateButtonState(launchButton, currentStatus);
 
@@ -118,6 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (liveStatus === 'running') {
             await ipcRenderer.invoke('stop-game-process', game);
         } else {
+            await launchOptionsSave;
             await ipcRenderer.invoke('launch-game-process', game);
         }
         playSound('maximize_007');
@@ -210,6 +233,17 @@ folder.addEventListener('click', async () => {
     }
 });
 
+document.getElementById('browser-folder-button').addEventListener('click', async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameIndex = urlParams.get('index');
+    const games = await ipcRenderer.invoke('load-games');
+    const game = games[gameIndex];
+
+    if (game && game.path) {
+        ipcRenderer.send('open-game-folder', game.path);
+    }
+});
+
 
 // mc dropdown
 const dropdown = document.getElementById('dropdown');
@@ -242,7 +276,7 @@ dropdown.addEventListener('click', async () => {
     }
 });
 
-    // retrieve versions
+// retrieve versions
 async function getVersions() {
     const response = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
     const data = await response.json();
@@ -269,7 +303,7 @@ async function loadVersions() {
     }
 }
 
-    // add installations
+// add installations
 const instCover = document.getElementById('versions-cover');
 const instWindow = document.getElementById('versions-window');
 const addInstButton = document.getElementById('add-inst-button');

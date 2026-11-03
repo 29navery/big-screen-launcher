@@ -7,6 +7,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="styles.css">
         <link rel="stylesheet" href="stylesheets/game.css">
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     </head>
     <body>
         <header>
@@ -26,13 +27,19 @@
             </div>
         </div>
 
-        <div id="options-cover" style="display: none;">
+        <div id="options-cover" style="display: block;">
             <div id="options-window"> 
                 <h2>Options</h2>
-                <p id="options-text">Edit the options and metadata of this game.</p> 
+                <p>Edit the options and metadata of this game.</p> 
                 
                 <p>Launch options</p>
-                <input type="text">
+                <input id="launch-options-input" type="text">
+                <a style="display: flex; align-items: center;"><span class="material-symbols-outlined">info</span><div style="width: 5px"></div>Launch flags for emu games</a>
+                <br>
+                <div style="display: flex; justify-content: space-between; flex-flow: row nowrap; gap: 20px; align-items: center; margin-top: 20px;">
+                    <p style="margin: 0;">Installed files...</p>
+                    <button class="normal-button" id="browser-folder-button">Browse...</button>
+                </div>
             </div>
         </div>
 
@@ -105,3 +112,14 @@
 
 <script src="script.js"></script>
 <script src="javascript/game.js"></script>
+
+
+
+<style>
+    .normal-button {
+        width: fit-content;
+        margin: 0;
+        border-radius: 0.35em;
+        height: 32px;
+    }
+</style>

@@ -451,6 +451,39 @@ let activeDownloadReq = null;
 // processes
 const activeProcesses = new Map()
 
+// Split launch options without invoking a shell; preserve Windows path separators.
+function parseLaunchOptions(value = '') {
+    if (typeof value !== 'string') throw new Error('Launch options must be text.');
+    const args = [];
+    let current = '', quote = null, started = false;
+    for (let i = 0; i < value.length; i++) {
+        const char = value[i];
+        if (char === '\\' && (value[i + 1] === '"' || value[i + 1] === "'")) {
+            current += value[++i]; started = true;
+        } else if (quote) {
+            if (char === quote) quote = null;
+            else current += char;
+        } else if (char === '"' || char === "'") {
+            quote = char; started = true;
+        } else if (/\s/.test(char)) {
+            if (started) { args.push(current); current = ''; started = false; }
+        } else { current += char; started = true; }
+    }
+    if (quote) throw new Error('Launch options contain an unclosed quote.');
+    if (started) args.push(current);
+    return args;
+}
+
+ipcMain.handle('save-game-launch-options', (event, gamePath, value) => {
+    if (typeof value !== 'string') throw new Error('Launch options must be text.');
+    const games = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
+    const game = games.find(item => item.path === gamePath);
+    if (!game) throw new Error('Game no longer exists in the library.');
+    game.launchOptions = value;
+    fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+    return true;
+});
+
 ipcMain.handle('launch-game-process', async (event, game) => {
     if (!game) {
         throw new Error('No game payload provided to launch-game-process.');
@@ -508,6 +541,8 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         }
         launchArgs = [...flags[game.emulator], exePath];
     }
+
+    launchArgs.push(...parseLaunchOptions(game.launchOptions || ''));
 
     if (activeProcesses.has(exePath)) {
         console.log("Game is already running.");

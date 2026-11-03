@@ -706,3 +706,9 @@ input:focus {
 /* Allow all emulator choices to fit inside the dialog. */
 #emu-selector { flex-wrap: wrap; height: auto; max-width: calc(100% - 32px); }
 #emulator-prompt-window { width: min(560px, calc(100vw - 32px)); height: auto; min-height: 205px; padding: 16px; box-sizing: border-box; }
+
+
+.material-symbols-outlined {
+    font-size: 15px !important;
+    align-items: center;
+}
