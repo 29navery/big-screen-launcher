@@ -370,6 +370,39 @@ ipcMain.handle('fetch-game-logo', async (event, gameName) => {
 
 
 
+ipcMain.handle('fetch-game-art-options', async (event, gameName) => {
+    const gameId = await getGameId(gameName);
+    const result = {};
+    await Promise.all(Object.entries({cover: 'grids', hero: 'heroes', logo: 'logos'}).map(async ([key, endpoint]) => {
+        try {
+            if (!gameId) { result[key] = []; return; }
+            const res = await net.fetch(WORKER_URL + '/?endpoint=' + endpoint + '/game/' + gameId);
+            if (!res.ok) throw new Error('Artwork request failed: ' + res.status);
+            const data = await res.json();
+            if (!Array.isArray(data.data)) throw new Error('Invalid artwork response.');
+            result[key] = data.data.filter(item => typeof item.url === 'string').map(item => ({url: item.url, thumb: item.thumb || item.url}));
+        } catch (error) {
+            console.error('Artwork options error:', error);
+            result[key] = null;
+        }
+    }));
+    return result;
+});
+
+ipcMain.handle('set-game-art', (event, gamePath, key, url, onlyIfMissing = false) => {
+    if (!['cover', 'hero', 'logo'].includes(key) || typeof url !== 'string' || !url.startsWith('https://')) {
+        throw new Error('Invalid artwork selection.');
+    }
+    const games = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
+    const game = games.find(item => item.path === gamePath);
+    if (!game) throw new Error('Game no longer exists in the library.');
+    if (!onlyIfMissing || !game[key]) {
+        game[key] = url;
+        fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+    }
+    return game[key];
+});
+
 // clear game list cache
 ipcMain.handle('clear-games-cache', async () => {
     try {

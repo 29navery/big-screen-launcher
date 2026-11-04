@@ -1,66 +1,84 @@
-// main code
-
+// Load and select artwork for the current library entry.
 async function initGamePage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gameIndex = urlParams.get('index');
-
-    if (gameIndex === null) {
-        console.warn("No game index provided in URL.");
-        return;
-    }
-
+    const index = new URLSearchParams(window.location.search).get('index');
+    if (index === null) return;
     const games = await ipcRenderer.invoke('load-games');
-    const game = games[gameIndex];
-
-    if (!game) {
-        console.error("Game not found at index:", gameIndex);
-        return;
-    }
-
-    console.log("Loaded game details for:", game.name);
-
-    let needsSave = false;
-
-    const heroImage = document.querySelector('.hero-image');
-    if (heroImage) {
-        if (game.hero) {
-            heroImage.style.setProperty('background-image', 'url(' + game.hero + ')', 'important');
-        } else {
-            console.log("Fetching wide hero banner for:", game.name);
-            const heroUrl = await ipcRenderer.invoke('fetch-game-hero', game.name);
-            if (heroUrl) {
-                game.hero = heroUrl;
-                heroImage.style.setProperty('background-image', 'url(' + game.hero + ')', 'important');
-                needsSave = true;
+    const game = games[index];
+    if (!game) return;
+    const types = {cover: 'grid', hero: 'hero', logo: 'logo'};
+    const applyArt = () => {
+        const hero = document.querySelector('.hero-image');
+        const logo = document.querySelector('.logo-image');
+        if (hero && game.hero) hero.style.setProperty('background-image', 'url(' + JSON.stringify(game.hero) + ')', 'important');
+        if (logo && game.logo) logo.src = game.logo;
+    };
+    applyArt();
+    let request = 0;
+    let saving = Promise.resolve();
+    const loadArt = async (name, defaults = false) => {
+        const token = ++request;
+        for (const type of Object.values(types)) {
+            const row = document.getElementById(type + '-art-container');
+            if (row) row.textContent = 'Loading artwork…';
+        }
+        let choices;
+        try { choices = await ipcRenderer.invoke('fetch-game-art-options', name); }
+        catch (error) { console.error(error); choices = {}; }
+        if (token !== request) return;
+        for (const [key, type] of Object.entries(types)) {
+            const row = document.getElementById(type + '-art-container');
+            if (!row) continue;
+            const items = choices[key] || [];
+            if (defaults && !game[key] && items.length) {
+                try { game[key] = await ipcRenderer.invoke('set-game-art', game.path, key, items[0].url, true); }
+                catch (error) { console.error('Could not save default artwork:', error); }
+                if (token !== request) return;
             }
-        }
-    }
-
-    const logoImage = document.querySelector('.logo-image');
-    if (logoImage) {
-        if (game.logo) {
-            logoImage.setAttribute('src', game.logo);
-        } else {
-            console.log("Fetching transparent logo for:", game.name);
-            const logoUrl = await ipcRenderer.invoke('fetch-game-logo', game.name);
-            if (logoUrl) {
-                game.logo = logoUrl;
-                logoImage.setAttribute('src', logoUrl);
-                needsSave = true;
+            const unique = new Map(items.map(item => [item.url, item]));
+            if (game[key] && !unique.has(game[key])) unique.set(game[key], {url: game[key], thumb: game[key]});
+            row.replaceChildren();
+            for (const item of unique.values()) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = type + '-art';
+                button.dataset.url = item.url;
+                button.classList.toggle('selected', game[key] === item.url);
+                button.setAttribute('aria-pressed', String(game[key] === item.url));
+                button.title = 'Use this ' + type + ' artwork';
+                const img = document.createElement('img');
+                img.src = item.thumb;
+                img.alt = type + ' artwork option';
+                img.loading = 'lazy';
+                button.appendChild(img);
+                button.addEventListener('click', () => {
+                    saving = saving.catch(() => {}).then(async () => {
+                        game[key] = await ipcRenderer.invoke('set-game-art', game.path, key, item.url);
+                        applyArt();
+                        for (const tile of row.children) {
+                            const selected = tile.dataset.url === game[key];
+                            tile.classList.toggle('selected', selected);
+                            tile.setAttribute('aria-pressed', String(selected));
+                        }
+                    });
+                    saving.catch(error => window.alert('Could not save artwork: ' + error.message));
+                });
+                row.appendChild(button);
             }
+            if (!unique.size) row.textContent = choices[key] == null ? 'Could not load artwork. Try searching again.' : 'No artwork found.';
         }
+        applyArt();
+    };
+    const search = document.getElementById('search-name');
+    if (search) {
+        search.value = game.name;
+        let timer;
+        search.addEventListener('input', () => {
+            clearTimeout(timer);
+            ++request;
+            timer = setTimeout(() => loadArt(search.value.trim() || game.name), 400);
+        });
     }
-
-    if (needsSave) {
-        const latestGames = await ipcRenderer.invoke('load-games');
-        const latest = latestGames.find(item => item.path === game.path);
-        if (latest) {
-            if (game.hero) latest.hero = game.hero;
-            if (game.logo) latest.logo = game.logo;
-            await ipcRenderer.invoke('save-games', latestGames);
-        }
-    }
-
+    await loadArt(game.name, true);
 }
 
 document.addEventListener('DOMContentLoaded', initGamePage);
