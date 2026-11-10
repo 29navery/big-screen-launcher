@@ -83,6 +83,68 @@ async function initGamePage() {
 
 document.addEventListener('DOMContentLoaded', initGamePage);
 
+function formatPlaytime(totalSeconds) {
+    const seconds = Math.max(0, Math.floor(totalSeconds || 0));
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    if (hours) return `${hours} h ${minutes} m`;
+    if (minutes) return `${minutes} m ${remainingSeconds} s`;
+    return `${remainingSeconds} s`;
+}
+
+function formatGameSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 KB';
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / (1024 ** unitIndex);
+    return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function updateGameMetadataDisplay(metadata) {
+    const sizeText = document.getElementById('game-size-text');
+    const playtimeText = document.getElementById('play-time-text');
+    const lastPlayedText = document.getElementById('last-played-text');
+    if (sizeText && metadata.gameSizeBytes !== null) sizeText.textContent = formatGameSize(metadata.gameSizeBytes);
+    if (playtimeText) playtimeText.textContent = formatPlaytime(metadata.playtimeSeconds);
+    if (lastPlayedText) {
+        lastPlayedText.textContent = metadata.lastPlayedAt
+            ? new Date(metadata.lastPlayedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : 'Never';
+    }
+}
+
+async function loadGameMetadata(game) {
+    try {
+        updateGameMetadataDisplay(await ipcRenderer.invoke('get-game-metadata', game.path, game.type));
+    } catch (error) {
+        console.error('Could not load game metadata:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const index = new URLSearchParams(window.location.search).get('index');
+    if (index === null) return;
+    try {
+        const games = await ipcRenderer.invoke('load-games');
+        const game = games[index];
+        if (game) await loadGameMetadata(game);
+    } catch (error) {
+        console.error('Could not load game metadata:', error);
+    }
+});
+
+ipcRenderer.on('game-metadata-update', (_event, payload) => {
+    const index = new URLSearchParams(window.location.search).get('index');
+    if (index === null) return;
+    ipcRenderer.invoke('load-games').then(games => {
+        const game = games[index];
+        if (game && game.path?.toLowerCase() === payload.gamePath?.toLowerCase()) {
+            loadGameMetadata(game);
+        }
+    }).catch(error => console.error('Could not refresh game metadata:', error));
+});
+
 // sound
 
 async function playSound(fileName) {

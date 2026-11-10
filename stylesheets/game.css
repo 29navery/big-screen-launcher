@@ -427,3 +427,32 @@
 .logo-art img {
     object-fit: contain;
 }
+
+
+.info-partition {
+    background-color: var(--rail-color);
+
+    display: flex;
+    flex-flow: row wrap;
+    position: absolute;
+
+    gap: 32px;
+    padding: 6px;
+    padding-left: 24px;
+    margin-top: 8px;
+
+    left: 20px;
+    right: 0px;
+
+    border-radius: 6px;
+}
+
+.info-partition > p {
+    font-size: 20px;
+    font-weight: 700;
+}
+.info-partition > p > span {
+    font-size: 16px;
+    font-weight: 300;
+    color: #ccc;
+}

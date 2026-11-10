@@ -233,12 +233,16 @@ ipcMain.handle('import-library-json', async () => {
     for (const entry of imported.games) {
         if (!entry || typeof entry.title !== 'string' || !entry.title.trim() || typeof entry.executablePath !== 'string' || !entry.executablePath.trim()) continue;
         const artwork = entry.artwork && typeof entry.artwork === 'object' ? entry.artwork : {};
+        let defaults = {};
+        if (![artwork.gridUrl, artwork.heroUrl, artwork.logoUrl].every(url => typeof url === 'string' && url)) {
+            defaults = await fetchDefaultGameArtwork(entry.title.trim());
+        }
         const game = {
             name: entry.title.trim(),
             path: entry.executablePath,
-            cover: typeof artwork.gridUrl === 'string' ? artwork.gridUrl : '',
-            hero: typeof artwork.heroUrl === 'string' ? artwork.heroUrl : '',
-            logo: typeof artwork.logoUrl === 'string' ? artwork.logoUrl : '',
+            cover: typeof artwork.gridUrl === 'string' && artwork.gridUrl ? artwork.gridUrl : defaults.cover || '',
+            hero: typeof artwork.heroUrl === 'string' && artwork.heroUrl ? artwork.heroUrl : defaults.hero || '',
+            logo: typeof artwork.logoUrl === 'string' && artwork.logoUrl ? artwork.logoUrl : defaults.logo || '',
             type: 'windows',
             emulator: '',
             playtimeSeconds: Number.isFinite(entry.playtimeSeconds) ? Math.max(0, entry.playtimeSeconds) : 0,
@@ -323,6 +327,56 @@ if (!fs.existsSync(gamesDir)) {
 }
 const gamesFilePath = path.join(gamesDir, '.games.json');
 
+function readSavedGames() {
+    if (!fs.existsSync(gamesFilePath)) return [];
+    const games = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
+    return Array.isArray(games) ? games : [];
+}
+
+function updateSavedGame(gamePath, update) {
+    const games = readSavedGames();
+    const game = games.find(item => typeof item.path === 'string' && item.path.toLowerCase() === gamePath.toLowerCase());
+    if (!game) return null;
+    update(game);
+    fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+    return game;
+}
+
+async function getPathSizeBytes(targetPath) {
+    let stat;
+    try { stat = await fs.promises.stat(targetPath); }
+    catch { return 0; }
+    if (stat.isFile()) return stat.size;
+    if (!stat.isDirectory()) return 0;
+
+    let total = 0;
+    let entries;
+    try { entries = await fs.promises.readdir(targetPath, { withFileTypes: true }); }
+    catch { return 0; }
+    for (const entry of entries) {
+        if (entry.isFile() || entry.isDirectory()) {
+            total += await getPathSizeBytes(path.join(targetPath, entry.name));
+        }
+    }
+    return total;
+}
+
+ipcMain.handle('get-game-metadata', async (event, gamePath, gameType) => {
+    if (typeof gamePath !== 'string') throw new Error('Invalid game path.');
+    const game = readSavedGames().find(item => typeof item.path === 'string' && item.path.toLowerCase() === gamePath.toLowerCase());
+    let sizePath = fs.existsSync(gamePath) && fs.statSync(gamePath).isDirectory() ? gamePath : path.dirname(gamePath);
+    const isEmulatedGame = gameType === 'emu' || game?.type === 'emu';
+    if (isEmulatedGame) {
+        // Emulated game entries point to the ROM or disc image, so report that file's size.
+        sizePath = gamePath;
+    }
+    return {
+        gameSizeBytes: await getPathSizeBytes(sizePath),
+        playtimeSeconds: Number.isFinite(game?.playtimeSeconds) ? game.playtimeSeconds : 0,
+        lastPlayedAt: game?.lastPlayedAt || null
+    };
+});
+
 ipcMain.handle('load-games', () => {
     try {
         if (fs.existsSync(gamesFilePath)) {
@@ -385,47 +439,48 @@ async function getGameId(gameName) {
     }
 }
 
-ipcMain.handle('fetch-game-art', async (event, gameName) => {
+async function fetchArtworkEndpoint(gameName, endpoint) {
     const gameId = await getGameId(gameName);
     if (!gameId) return null;
-
     try {
-        const res = await net.fetch(`${WORKER_URL}/?endpoint=grids/game/${gameId}`);
+        const res = await net.fetch(`${WORKER_URL}/?endpoint=${endpoint}/game/${gameId}`);
+        if (!res.ok) return null;
         const data = await res.json();
         return data.data?.[0]?.url || null;
     } catch (err) {
-        console.error("Proxy Grid error:", err);
+        console.error(`Artwork request failed (${endpoint}):`, err);
         return null;
     }
-});
+}
 
-ipcMain.handle('fetch-game-hero', async (event, gameName) => {
+async function fetchGameArt(gameName) { return fetchArtworkEndpoint(gameName, 'grids'); }
+async function fetchGameHero(gameName) { return fetchArtworkEndpoint(gameName, 'heroes'); }
+async function fetchGameLogo(gameName) { return fetchArtworkEndpoint(gameName, 'logos'); }
+
+async function fetchDefaultGameArtwork(gameName) {
     const gameId = await getGameId(gameName);
-    if (!gameId) return null;
+    if (!gameId) return {};
+    const fetchFirst = async endpoint => {
+        try {
+            const res = await net.fetch(`${WORKER_URL}/?endpoint=${endpoint}/game/${gameId}`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.data?.[0]?.url || null;
+        } catch (err) {
+            console.error(`Artwork request failed (${endpoint}):`, err);
+            return null;
+        }
+    };
+    const [cover, hero, logo] = await Promise.all([
+        fetchFirst('grids'), fetchFirst('heroes'), fetchFirst('logos')
+    ]);
+    return { cover, hero, logo };
+}
 
-    try {
-        const res = await net.fetch(`${WORKER_URL}/?endpoint=heroes/game/${gameId}`);
-        const data = await res.json();
-        return data.data?.[0]?.url || null;
-    } catch (err) {
-        console.error("Proxy Hero error:", err);
-        return null;
-    }
-});
-
-ipcMain.handle('fetch-game-logo', async (event, gameName) => {
-    const gameId = await getGameId(gameName);
-    if (!gameId) return null;
-
-    try {
-        const res = await net.fetch(`${WORKER_URL}/?endpoint=logos/game/${gameId}`);
-        const data = await res.json();
-        return data.data?.[0]?.url || null;
-    } catch (err) {
-        console.error("Proxy Logo error:", err);
-        return null;
-    }
-});
+ipcMain.handle('fetch-game-art', async (event, gameName) => fetchGameArt(gameName));
+ipcMain.handle('fetch-game-hero', async (event, gameName) => fetchGameHero(gameName));
+ipcMain.handle('fetch-game-logo', async (event, gameName) => fetchGameLogo(gameName));
+ipcMain.handle('fetch-default-game-artwork', async (event, gameName) => fetchDefaultGameArtwork(gameName));
 
 
 
@@ -542,6 +597,25 @@ let activeDownloadReq = null;
 
 // processes
 const activeProcesses = new Map()
+const gamePlaySessions = new Map();
+
+function finishGamePlaySession(gamePath) {
+    const session = gamePlaySessions.get(gamePath);
+    if (!session) return;
+    gamePlaySessions.delete(gamePath);
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - session.startedAt) / 1000));
+    const game = updateSavedGame(session.gamePath, saved => {
+        saved.playtimeSeconds = (Number.isFinite(saved.playtimeSeconds) ? saved.playtimeSeconds : 0) + elapsedSeconds;
+    });
+    if (game) {
+        const metadata = {
+            gameSizeBytes: null,
+            playtimeSeconds: game.playtimeSeconds,
+            lastPlayedAt: game.lastPlayedAt || null
+        };
+        BrowserWindow.getAllWindows().forEach(win => win.webContents.send('game-metadata-update', { gamePath: session.gamePath, metadata }));
+    }
+}
 
 // Split launch options without invoking a shell; preserve Windows path separators.
 function parseLaunchOptions(value = '') {
@@ -620,6 +694,7 @@ ipcMain.handle('launch-game-process', async (event, game) => {
     if (!fs.existsSync(exePath) || !fs.statSync(exePath).isFile()) {
         throw new Error(`Executable file not found at: ${exePath}`);
     }
+    game.path = exePath;
 
     let launchPath = exePath;
     let launchArgs = [];
@@ -653,11 +728,29 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         
         child.on('error', error => {
             activeProcesses.delete(exePath);
+            finishGamePlaySession(exePath);
             broadcastStatus(exePath, 'stopped');
             dialog.showErrorBox('Could not launch game', error.message);
         });
         child.unref();
         activeProcesses.set(exePath, child);
+
+        child.once('spawn', () => {
+            const startedAt = Date.now();
+            const gamePath = game.path || exePath;
+            gamePlaySessions.set(exePath, { gamePath, startedAt });
+            const updatedGame = updateSavedGame(gamePath, saved => {
+                saved.lastPlayedAt = new Date(startedAt).toISOString();
+            });
+            if (updatedGame) {
+                const metadata = {
+                    gameSizeBytes: null,
+                    playtimeSeconds: Number.isFinite(updatedGame.playtimeSeconds) ? updatedGame.playtimeSeconds : 0,
+                    lastPlayedAt: updatedGame.lastPlayedAt
+                };
+                BrowserWindow.getAllWindows().forEach(win => win.webContents.send('game-metadata-update', { gamePath, metadata }));
+            }
+        });
 
         // Broadcast 'running' globally
         broadcastStatus(exePath, 'running');
@@ -665,12 +758,14 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         // Listen for when the game process closes
         child.on('exit', () => {
             activeProcesses.delete(exePath);
+            finishGamePlaySession(exePath);
             // Broadcast 'stopped' globally so the UI instantly updates!
             broadcastStatus(exePath, 'stopped');
         });
 
     } catch (error) {
         activeProcesses.delete(exePath);
+        finishGamePlaySession(exePath);
         broadcastStatus(exePath, 'stopped');
         throw new Error(`Failed to launch process: ${error.message}`);
     }
@@ -685,8 +780,6 @@ ipcMain.handle('stop-game-process', async (event, game) => {
     
     if (child) {
         child.kill();
-        activeProcesses.delete(targetPath);
-        broadcastStatus(targetPath, 'stopped');
     }
 });
 
@@ -943,11 +1036,10 @@ ipcMain.handle('start-download', async (event, payload) => {
                 let gameLogo = null;
 
                 try {
-                    const fetchedCover = await fetchGameArt(gameName);
-                    if (fetchedCover) gameCover = fetchedCover;
-
-                    gameHero = await fetchGameHero(gameName);
-                    gameLogo = await fetchGameLogo(gameName);
+                    const fetchedArtwork = await fetchDefaultGameArtwork(gameName);
+                    if (fetchedArtwork.cover) gameCover = fetchedArtwork.cover;
+                    gameHero = fetchedArtwork.hero;
+                    gameLogo = fetchedArtwork.logo;
                 } catch (artErr) {
                     console.error("Failed to fetch artwork automatically:", artErr);
                 }

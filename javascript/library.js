@@ -141,12 +141,14 @@ addGameButton.addEventListener('click', async () => {
 
     console.log(`Searching SteamGridDB for art: ${gameName}...`);
     
-    const artworkUrl = await ipcRenderer.invoke('fetch-game-art', gameName);
+    const artwork = await ipcRenderer.invoke('fetch-default-game-artwork', gameName);
 
     const newGame = {
         name: gameName,
         path: filePath,
-        cover: artworkUrl || '',
+        cover: artwork.cover || '',
+        hero: artwork.hero || '',
+        logo: artwork.logo || '',
         type: gameType,
         emulator
     };
