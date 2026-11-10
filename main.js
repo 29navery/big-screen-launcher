@@ -212,6 +212,55 @@ ipcMain.handle('dialog:open-game-file', async (event, emulator) => {
     return canceled ? null : filePaths[0];
 });
 
+ipcMain.handle('import-library-json', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+        title: 'Import Game Library',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON Library', extensions: ['json'] }]
+    });
+    if (canceled || !filePaths[0]) return { canceled: true };
+
+    const imported = JSON.parse(fs.readFileSync(filePaths[0], 'utf8'));
+    if (imported?.format !== 'big-screen-launcher-library' || imported?.version !== 1 || !Array.isArray(imported.games)) {
+        throw new Error('This file is not a supported Big Screen Launcher library export.');
+    }
+
+    const games = fs.existsSync(gamesFilePath) ? JSON.parse(fs.readFileSync(gamesFilePath, 'utf8')) : [];
+    if (!Array.isArray(games)) throw new Error('The existing game library is invalid.');
+
+    let added = 0;
+    let updated = 0;
+    for (const entry of imported.games) {
+        if (!entry || typeof entry.title !== 'string' || !entry.title.trim() || typeof entry.executablePath !== 'string' || !entry.executablePath.trim()) continue;
+        const artwork = entry.artwork && typeof entry.artwork === 'object' ? entry.artwork : {};
+        const game = {
+            name: entry.title.trim(),
+            path: entry.executablePath,
+            cover: typeof artwork.gridUrl === 'string' ? artwork.gridUrl : '',
+            hero: typeof artwork.heroUrl === 'string' ? artwork.heroUrl : '',
+            logo: typeof artwork.logoUrl === 'string' ? artwork.logoUrl : '',
+            type: 'windows',
+            emulator: '',
+            playtimeSeconds: Number.isFinite(entry.playtimeSeconds) ? Math.max(0, entry.playtimeSeconds) : 0,
+            favorite: Boolean(entry.favorite),
+            artworkKind: typeof artwork.kind === 'string' ? artwork.kind : '',
+            color: typeof artwork.color === 'string' ? artwork.color : '',
+            initials: typeof artwork.initials === 'string' ? artwork.initials : ''
+        };
+        const existingIndex = games.findIndex(existing => typeof existing.path === 'string' && existing.path.toLowerCase() === game.path.toLowerCase());
+        if (existingIndex >= 0) {
+            games[existingIndex] = { ...games[existingIndex], ...game };
+            updated++;
+        } else {
+            games.push(game);
+            added++;
+        }
+    }
+
+    fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+    return { added, updated };
+});
+
 ipcMain.handle('open-external-link', async (event, url) => {
     await shell.openExternal(url);
 });

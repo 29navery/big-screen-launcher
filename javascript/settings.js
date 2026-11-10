@@ -43,6 +43,24 @@ async function checkUpdates() {
 
 checkUpdates();
 
+const importLibraryButton = document.getElementById('import-library-btn');
+if (importLibraryButton) {
+    importLibraryButton.addEventListener('click', async () => {
+        importLibraryButton.disabled = true;
+        try {
+            const result = await ipcRenderer.invoke('import-library-json');
+            if (!result.canceled) {
+                window.alert(`Library imported: ${result.added} added, ${result.updated} updated.`);
+            }
+        } catch (error) {
+            console.error('Could not import library:', error);
+            window.alert('Could not import library: ' + error.message);
+        } finally {
+            importLibraryButton.disabled = false;
+        }
+    });
+}
+
 const updateButton = document.getElementById('update-install-button');
 if (updateButton) {
     updateButton.addEventListener("click", () => {
