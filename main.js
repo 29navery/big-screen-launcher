@@ -46,6 +46,9 @@ app.on('second-instance', () => {
 });
 
 autoUpdater.autoDownload = true;
+autoUpdater.on('error', (error) => {
+    console.error('Update check failed:', error);
+});
 ipcMain.on('restart-app', () => {
     app.relaunch();
     app.exit(0);
@@ -175,6 +178,13 @@ app.whenReady().then(() => {
     app.on('activate', focusMainWindow);
 
     applySettings();
+
+    // Check for a GitHub release whenever the packaged app starts.
+    if (app.isPackaged) {
+        autoUpdater.checkForUpdates().catch((error) => {
+            console.error('Update check failed:', error);
+        });
+    }
 });
 
 app.on('window-all-closed', () => {
