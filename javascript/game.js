@@ -187,6 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
+    if (game.type?.toLowerCase() === 'minecraft' || game.name?.toLowerCase() === 'minecraft') {
+        await setupMinecraftVersions();
+    }
+
     const launchOptionsInput = document.getElementById('launch-options-input');
     let launchOptionsSave = Promise.resolve();
     if (launchOptionsInput) {
@@ -216,12 +220,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     launchButton.onclick = async () => {
         try {
         const liveStatus = await ipcRenderer.invoke('get-game-status', game.path);
+        const latestGames = await ipcRenderer.invoke('load-games');
+        const latestGame = latestGames.find(item => item.path === game.path) || game;
         
         if (liveStatus === 'running') {
-            await ipcRenderer.invoke('stop-game-process', game);
+            await ipcRenderer.invoke('stop-game-process', latestGame);
         } else {
             await launchOptionsSave;
-            await ipcRenderer.invoke('launch-game-process', game);
+            await ipcRenderer.invoke('launch-game-process', latestGame);
         }
         playSound('maximize_007');
         } catch (error) { window.alert('Could not launch game: ' + error.message); }
@@ -325,7 +331,49 @@ const dropdownMenu = document.getElementById('dropdown-menu');
 
 const arrow = document.getElementById('dropdown-arrow');
 
-let animating = false
+let animating = false;
+
+async function setupMinecraftVersions() {
+    const versions = await ipcRenderer.invoke('get-minecraft-versions');
+    const list = document.getElementById('minecraft-installed-versions');
+    const dropdownButton = document.getElementById('dropdown');
+    const selectedLabel = dropdownButton?.querySelector('p');
+    const params = new URLSearchParams(window.location.search);
+    const games = await ipcRenderer.invoke('load-games');
+    const game = games[params.get('index')];
+    if (!list || !dropdownButton) return;
+    list.replaceChildren();
+    // Keep the selector visible for an empty Minecraft library so Add Installation
+    // remains reachable from #dropdown-menu before the first version is installed.
+    dropdownButton.style.display = 'flex';
+    if (!versions.length) {
+        if (selectedLabel) selectedLabel.textContent = 'Minecraft — Add Version';
+        const empty = document.createElement('p');
+        empty.textContent = 'No installed versions yet.';
+        list.appendChild(empty);
+        return;
+    }
+    const savedVersion = game?.selectedMinecraftVersion;
+    const selectedVersion = versions.includes(savedVersion) ? savedVersion : versions[0];
+    if (selectedLabel) selectedLabel.textContent = `Minecraft ${selectedVersion}`;
+    if (game && game.selectedMinecraftVersion !== selectedVersion) {
+        game.selectedMinecraftVersion = selectedVersion;
+        await ipcRenderer.invoke('save-games', games);
+    }
+    for (const version of versions) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'minecraft-dropdown-item';
+        item.textContent = `Minecraft ${version}`;
+        item.addEventListener('click', async () => {
+            if (selectedLabel) selectedLabel.textContent = `Minecraft ${version}`;
+            game.selectedMinecraftVersion = version;
+            await ipcRenderer.invoke('save-games', games);
+            dropdownMenu.style.display = 'none';
+        });
+        list.appendChild(item);
+    }
+}
 
 dropdownMenu.style.display = 'none';
 
@@ -350,25 +398,37 @@ dropdown.addEventListener('click', async () => {
     }
 });
 
-// retrieve versions
-async function getVersions() {
-    const response = await fetch('https://launchermeta.mojang.com/mc/game/version_manifest.json');
-    const data = await response.json();
-
-    return data.versions;
-}
-
 async function loadVersions() {
     const versionBox = document.getElementById('versions-list');
-
+    const statusText = document.getElementById('versions-text');
+    versionBox.replaceChildren();
+    statusText.textContent = 'Choose a release to download.';
     try {
-        const allVersions = await getVersions();
-
-        const releases = allVersions.filter(v => v.type === 'release');
-
-        releases.forEach(version => {
-            const option = document.createElement('div');
-            option.textContent = `Minecraft ${version.id}`;
+        const [versions, installed] = await Promise.all([
+            ipcRenderer.invoke('get-available-minecraft-versions'),
+            ipcRenderer.invoke('get-minecraft-versions')
+        ]);
+        if (!versions.length) versionBox.textContent = 'No Minecraft releases were returned.';
+        versions.forEach(version => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'minecraft-dropdown-item';
+            option.disabled = installed.includes(version.id);
+            option.textContent = `Minecraft ${version.id}${option.disabled ? ' (Installed)' : ' — Download'}`;
+            option.addEventListener('click', async () => {
+                option.disabled = true;
+                statusText.textContent = `Downloading Minecraft ${version.id}…`;
+                try {
+                    const result = await ipcRenderer.invoke('install-minecraft-version', version.id);
+                    statusText.textContent = `Minecraft ${result.version} installed.`;
+                    await setupMinecraftVersions();
+                    await loadVersions();
+                } catch (error) {
+                    console.error('Minecraft installation failed:', error);
+                    statusText.textContent = `Could not install ${version.id}: ${error.message}`;
+                    option.disabled = false;
+                }
+            });
             versionBox.appendChild(option);
         })
     } catch (err) {
@@ -377,12 +437,18 @@ async function loadVersions() {
     }
 }
 
+ipcRenderer.on('minecraft-install-progress', (_event, progress) => {
+    const statusText = document.getElementById('versions-text');
+    if (statusText) statusText.textContent = `Downloading Minecraft ${progress.version}: ${progress.completed} / ${progress.total} files`;
+});
+
 // add installations
 const instCover = document.getElementById('versions-cover');
 const instWindow = document.getElementById('versions-window');
 const addInstButton = document.getElementById('add-inst-button');
 
-addInstButton.addEventListener('click', () => {
+addInstButton.addEventListener('click', async () => {
+    await loadVersions();
     if (instCover.style.display !== 'none') {
         instCover.style.setProperty('display', 'none');
     } else {
@@ -391,11 +457,6 @@ addInstButton.addEventListener('click', () => {
 });
 
 document.addEventListener('click', (event) => {
-    addInstButton.addEventListener('click', (event) => {
-        event.stopPropagation();
-        instCover.style.setProperty('display', 'flex');
-        loadVersions();
-    });
     if (instWindow && !instWindow.contains(event.target) && !addInstButton.contains(event.target)) {
         instCover.style.setProperty('display', 'none');
     }

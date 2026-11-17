@@ -388,5 +388,12 @@ if (refreshButton) {
 const minecraftButton = document.getElementById('minecraft-button');
 
 minecraftButton.addEventListener('click', () => {
-    
+    minecraftButton.disabled = true;
+    ipcRenderer.invoke('add-minecraft-library').then(result => {
+        const versionSummary = result.versions.length ? ` ${result.versions.length} version(s) are already installed.` : ' Open Minecraft in your library and choose Add Installation to download a version.';
+        window.alert(`Minecraft was added to your library.${versionSummary}`);
+    }).catch(error => {
+        console.error('Could not add Minecraft to the library:', error);
+        window.alert('Could not add Minecraft to the library: ' + error.message);
+    }).finally(() => { minecraftButton.disabled = false; });
 });

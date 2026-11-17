@@ -50,6 +50,7 @@
 
 .mc-dropdown {
     position: absolute;
+    z-index: 20;
     background-color: var(--minecraft-version-dropdown-fill-color);
 
     display: flex;
@@ -435,6 +436,7 @@
     display: flex;
     flex-flow: row wrap;
     position: absolute;
+    z-index: 1;
 
     gap: 32px;
     padding: 6px;

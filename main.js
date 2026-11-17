@@ -7,7 +7,7 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 const { autoUpdater } = require('electron-updater');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -640,6 +640,165 @@ function parseLaunchOptions(value = '') {
     return args;
 }
 
+function matchesMinecraftRules(rules) {
+    if (!Array.isArray(rules) || rules.length === 0) return true;
+    let allowed = false;
+    for (const rule of rules) {
+        const os = rule.os || {};
+        if (os.name && os.name !== 'windows') continue;
+        if (os.arch && !new RegExp(os.arch).test(process.arch)) continue;
+        if (os.version && !new RegExp(os.version).test(require('os').release())) continue;
+        const enabledFeatures = { has_custom_resolution: false, is_demo_user: false, has_quick_plays_support: false };
+        if (rule.features && Object.entries(rule.features).some(([key, value]) => Boolean(enabledFeatures[key]) !== Boolean(value))) continue;
+        allowed = rule.action === 'allow';
+    }
+    return allowed;
+}
+
+function getMinecraftArgumentValues(value, variables) {
+    const values = Array.isArray(value) ? value : [value];
+    return values.filter(item => typeof item === 'string').map(item => item.replace(/\$\{([^}]+)\}/g, (_match, key) => variables[key] ?? ''));
+}
+
+function extractMinecraftNatives(library, versionFolder, nativesDirectory) {
+    if (!matchesMinecraftRules(library.rules)) return;
+    const classifierName = library.natives?.windows?.replace('${arch}', process.arch === 'ia32' ? '32' : '64');
+    const classifier = classifierName && library.downloads?.classifiers?.[classifierName];
+    if (!classifier?.path) return;
+    const nativeJar = path.resolve(versionFolder, 'libraries', classifier.path);
+    if (!fs.existsSync(nativeJar)) return;
+    const excluded = library.extract?.exclude || [];
+    const archive = new AdmZip(nativeJar);
+    for (const entry of archive.getEntries()) {
+        if (entry.isDirectory || excluded.some(prefix => entry.entryName.startsWith(prefix))) continue;
+        const destination = path.resolve(nativesDirectory, entry.entryName);
+        if (!destination.startsWith(nativesDirectory + path.sep)) continue;
+        fs.mkdirSync(path.dirname(destination), { recursive: true });
+        fs.writeFileSync(destination, entry.getData());
+    }
+}
+
+function findJavaCandidates() {
+    const candidates = [];
+    if (process.env.JAVA_HOME) candidates.push(path.join(process.env.JAVA_HOME, 'bin', 'java.exe'));
+    const runtimeRoot = path.join(app.getPath('appData'), '.minecraft', 'runtime');
+    const scan = (folder, depth = 0) => {
+        if (depth > 6 || !fs.existsSync(folder)) return;
+        let entries;
+        try { entries = fs.readdirSync(folder, { withFileTypes: true }); } catch { return; }
+        for (const entry of entries) {
+            const entryPath = path.join(folder, entry.name);
+            if (entry.isDirectory()) scan(entryPath, depth + 1);
+            else if (entry.isFile() && entry.name.toLowerCase() === 'java.exe') candidates.push(entryPath);
+        }
+    };
+    scan(runtimeRoot);
+    candidates.push('java');
+    return [...new Set(candidates)];
+}
+
+function resolveJavaExecutable(requiredMajor) {
+    const found = [];
+    for (const javaPath of findJavaCandidates()) {
+        const result = spawnSync(javaPath, ['-version'], { encoding: 'utf8', timeout: 5000, windowsHide: true });
+        const output = `${result.stdout || ''}\n${result.stderr || ''}`;
+        const match = output.match(/version\s+"(?:1\.)?(\d+)/i) || output.match(/openjdk\s+(\d+)/i);
+        if (!match) continue;
+        const major = Number(match[1]);
+        found.push(`${javaPath} (Java ${major})`);
+        if (major >= requiredMajor) {
+            const javawPath = path.join(path.dirname(javaPath), 'javaw.exe');
+            return fs.existsSync(javawPath) ? javawPath : javaPath;
+        }
+    }
+    throw new Error(`Minecraft requires Java ${requiredMajor} or newer. ${found.length ? `Found: ${found.join(', ')}.` : 'Install a compatible Java runtime or install one with the official Minecraft Launcher.'}`);
+}
+
+function prepareMinecraftLaunch(game) {
+    const versionId = game.selectedMinecraftVersion || game.version;
+    if (!versionId || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Choose a Minecraft installation first.');
+    const versionFolder = path.join(game.path, versionId);
+    const metadataPath = path.join(versionFolder, `${versionId}.json`);
+    const clientJar = path.join(versionFolder, `${versionId}.jar`);
+    if (!fs.existsSync(path.join(versionFolder, '.installed')) || !fs.existsSync(metadataPath) || !fs.existsSync(clientJar)) {
+        throw new Error(`Minecraft ${versionId} is not fully installed. Use the version dropdown to install it first.`);
+    }
+    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+    const javaPath = resolveJavaExecutable(metadata.javaVersion?.majorVersion || 8);
+    const nativesDirectory = path.join(versionFolder, 'natives');
+    fs.mkdirSync(nativesDirectory, { recursive: true });
+
+    const classpathEntries = [clientJar];
+    for (const library of metadata.libraries || []) {
+        if (!matchesMinecraftRules(library.rules)) continue;
+        const artifact = library.downloads?.artifact;
+        if (artifact?.path) {
+            const artifactPath = path.resolve(versionFolder, 'libraries', artifact.path);
+            if (!artifactPath.startsWith(path.resolve(versionFolder, 'libraries') + path.sep)) throw new Error('Minecraft metadata contains an invalid library path.');
+            if (!fs.existsSync(artifactPath)) throw new Error(`A Minecraft library is missing: ${artifact.path}`);
+            classpathEntries.push(artifactPath);
+        }
+        extractMinecraftNatives(library, versionFolder, nativesDirectory);
+    }
+
+    const username = (process.env.USERNAME || 'Player').replace(/[^A-Za-z0-9_]/g, '').slice(0, 16) || 'Player';
+    const offlineUuidHex = require('crypto').createHash('md5').update(`OfflinePlayer:${username}`).digest('hex');
+    const offlineUuid = `${offlineUuidHex.slice(0, 8)}-${offlineUuidHex.slice(8, 12)}-${offlineUuidHex.slice(12, 16)}-${offlineUuidHex.slice(16, 20)}-${offlineUuidHex.slice(20)}`;
+    const assetIndex = metadata.assetIndex || {};
+    const loggingFile = metadata.logging?.client?.file;
+    const variables = {
+        auth_player_name: username,
+        version_name: versionId,
+        game_directory: game.path,
+        assets_root: path.join(versionFolder, 'assets'),
+        assets_index_name: assetIndex.id || '',
+        auth_uuid: offlineUuid,
+        auth_access_token: '0',
+        user_type: 'legacy',
+        version_type: metadata.type || 'release',
+        user_properties: '{}',
+        clientid: '0',
+        auth_xuid: '0',
+        natives_directory: nativesDirectory,
+        library_directory: path.join(versionFolder, 'libraries'),
+        classpath: classpathEntries.join(path.delimiter),
+        classpath_separator: path.delimiter,
+        launcher_name: 'Big Screen Launcher',
+        launcher_version: app.getVersion(),
+        resolution_width: '1280',
+        resolution_height: '720',
+        path: loggingFile ? path.join(versionFolder, 'assets', 'log_configs', loggingFile.id || 'client.xml') : ''
+    };
+
+    let jvmArgs = [];
+    if (Array.isArray(metadata.arguments?.jvm)) {
+        for (const argument of metadata.arguments.jvm) {
+            if (typeof argument === 'string') jvmArgs.push(...getMinecraftArgumentValues(argument, variables));
+            else if (argument && matchesMinecraftRules(argument.rules)) jvmArgs.push(...getMinecraftArgumentValues(argument.value, variables));
+        }
+    } else {
+        jvmArgs = [`-Djava.library.path=${nativesDirectory}`, '-cp', variables.classpath];
+    }
+    if (metadata.logging?.client?.argument) {
+        jvmArgs.push(...getMinecraftArgumentValues(metadata.logging.client.argument, variables));
+    }
+    if (!jvmArgs.includes('-cp') && !jvmArgs.includes('-classpath')) jvmArgs.push('-cp', variables.classpath);
+    if (!jvmArgs.some(argument => argument.startsWith('-Djava.library.path='))) jvmArgs.push(`-Djava.library.path=${nativesDirectory}`);
+
+    let gameArgs = [];
+    if (Array.isArray(metadata.arguments?.game)) {
+        for (const argument of metadata.arguments.game) {
+            if (typeof argument === 'string') gameArgs.push(...getMinecraftArgumentValues(argument, variables));
+            else if (argument && matchesMinecraftRules(argument.rules)) gameArgs.push(...getMinecraftArgumentValues(argument.value, variables));
+        }
+    } else if (metadata.minecraftArguments) {
+        gameArgs = getMinecraftArgumentValues(parseLaunchOptions(metadata.minecraftArguments), variables);
+    }
+
+    const launchArgs = [...jvmArgs, metadata.mainClass, ...gameArgs];
+    return { javaPath, launchArgs, workingDirectory: game.path, processKey: game.path };
+}
+
 ipcMain.handle('save-game-launch-options', (event, gamePath, value) => {
     if (typeof value !== 'string') throw new Error('Launch options must be text.');
     const games = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
@@ -656,89 +815,76 @@ ipcMain.handle('launch-game-process', async (event, game) => {
     }
 
     let exePath = '';
-
-    if (game.path && typeof game.path === 'string' && fs.existsSync(game.path) && fs.statSync(game.path).isFile()) {
-        exePath = game.path;
-    } else {
-        const gameName = (game.name || game.title || '').trim();
-
-        if (!gameName) {
-            throw new Error('Game name is required but was undefined or empty.');
-        }
-
-        const gameFolder = path.join(
-            app.getPath('documents'),
-            'Big Screen Launcher',
-            'Games',
-            gameName
-        );
-
-        let exeName = (game.exe || '').trim();
-
-        if (exeName && fs.existsSync(path.join(gameFolder, exeName))) {
-            exePath = path.join(gameFolder, exeName);
-        } else {
-            console.warn(`Saved exe "${exeName}" not found. Scanning ${gameFolder} for real executable...`);
-            const detectedExe = findExecutableInFolder(gameFolder, gameName);
-            exePath = path.join(gameFolder, detectedExe);
-
-            saveGameToLibrary({
-                ...game,
-                name: gameName,
-                exe: detectedExe,
-                path: exePath
-            });
-        }
-    }
-
-    if (!fs.existsSync(exePath) || !fs.statSync(exePath).isFile()) {
-        throw new Error(`Executable file not found at: ${exePath}`);
-    }
-    game.path = exePath;
-
-    let launchPath = exePath;
+    let launchPath = '';
     let launchArgs = [];
-    if (game.type === 'emu') {
-        const flags = { xenia: [], dolphin: ['-e'], cemu: ['-g'], ryujinx: [], yuzu: [], rpcs3: [], shadps4: ['-g'] };
-        if (!Object.hasOwn(flags, game.emulator)) throw new Error('Choose a supported emulator for this game.');
-        const savedSettings = fs.existsSync(settingsFilePath) ? JSON.parse(fs.readFileSync(settingsFilePath, 'utf8')) : {};
-        launchPath = (savedSettings[game.emulator + 'DirInput'] || '').trim();
-        if (!launchPath || !fs.existsSync(launchPath) || !fs.statSync(launchPath).isFile()) {
-            throw new Error('Locate the ' + game.emulator + ' executable in Settings first.');
+    let processKey = '';
+    if (game.type === 'minecraft') {
+        const minecraftLaunch = prepareMinecraftLaunch(game);
+        launchPath = minecraftLaunch.javaPath;
+        launchArgs = minecraftLaunch.launchArgs;
+        processKey = minecraftLaunch.processKey;
+    } else {
+        if (game.path && typeof game.path === 'string' && fs.existsSync(game.path) && fs.statSync(game.path).isFile()) {
+            exePath = game.path;
+        } else {
+            const gameName = (game.name || game.title || '').trim();
+            if (!gameName) throw new Error('Game name is required but was undefined or empty.');
+            const gameFolder = path.join(app.getPath('documents'), 'Big Screen Launcher', 'Games', gameName);
+            const exeName = (game.exe || '').trim();
+            if (exeName && fs.existsSync(path.join(gameFolder, exeName))) {
+                exePath = path.join(gameFolder, exeName);
+            } else {
+                console.warn(`Saved exe "${exeName}" not found. Scanning ${gameFolder} for real executable...`);
+                const detectedExe = findExecutableInFolder(gameFolder, gameName);
+                exePath = path.join(gameFolder, detectedExe);
+                saveGameToLibrary({ ...game, name: gameName, exe: detectedExe, path: exePath });
+            }
         }
-        launchArgs = [...flags[game.emulator], exePath];
+        if (!fs.existsSync(exePath) || !fs.statSync(exePath).isFile()) throw new Error(`Executable file not found at: ${exePath}`);
+        game.path = exePath;
+        launchPath = exePath;
+        processKey = exePath;
+        if (game.type === 'emu') {
+            const flags = { xenia: [], dolphin: ['-e'], cemu: ['-g'], ryujinx: [], yuzu: [], rpcs3: [], shadps4: ['-g'] };
+            if (!Object.hasOwn(flags, game.emulator)) throw new Error('Choose a supported emulator for this game.');
+            const savedSettings = fs.existsSync(settingsFilePath) ? JSON.parse(fs.readFileSync(settingsFilePath, 'utf8')) : {};
+            launchPath = (savedSettings[game.emulator + 'DirInput'] || '').trim();
+            if (!launchPath || !fs.existsSync(launchPath) || !fs.statSync(launchPath).isFile()) {
+                throw new Error('Locate the ' + game.emulator + ' executable in Settings first.');
+            }
+            launchArgs = [...flags[game.emulator], exePath];
+        }
+        launchArgs.push(...parseLaunchOptions(game.launchOptions || ''));
     }
 
-    launchArgs.push(...parseLaunchOptions(game.launchOptions || ''));
-
-    if (activeProcesses.has(exePath)) {
+    if (activeProcesses.has(processKey)) {
         console.log("Game is already running.");
         return { success: true };
     }
 
     try {
         // Broadcast 'starting' globally
-        broadcastStatus(exePath, 'starting');
+        broadcastStatus(processKey, 'starting');
 
         const child = spawn(launchPath, launchArgs, { 
             detached: true, 
             stdio: 'ignore',
-            cwd: path.dirname(launchPath) 
+            cwd: game.type === 'minecraft' ? game.path : path.dirname(launchPath)
         });
         
         child.on('error', error => {
-            activeProcesses.delete(exePath);
-            finishGamePlaySession(exePath);
-            broadcastStatus(exePath, 'stopped');
+            activeProcesses.delete(processKey);
+            finishGamePlaySession(processKey);
+            broadcastStatus(processKey, 'stopped');
             dialog.showErrorBox('Could not launch game', error.message);
         });
         child.unref();
-        activeProcesses.set(exePath, child);
+        activeProcesses.set(processKey, child);
 
         child.once('spawn', () => {
             const startedAt = Date.now();
             const gamePath = game.path || exePath;
-            gamePlaySessions.set(exePath, { gamePath, startedAt });
+            gamePlaySessions.set(processKey, { gamePath, startedAt });
             const updatedGame = updateSavedGame(gamePath, saved => {
                 saved.lastPlayedAt = new Date(startedAt).toISOString();
             });
@@ -753,20 +899,20 @@ ipcMain.handle('launch-game-process', async (event, game) => {
         });
 
         // Broadcast 'running' globally
-        broadcastStatus(exePath, 'running');
+        broadcastStatus(processKey, 'running');
 
         // Listen for when the game process closes
         child.on('exit', () => {
-            activeProcesses.delete(exePath);
-            finishGamePlaySession(exePath);
+            activeProcesses.delete(processKey);
+            finishGamePlaySession(processKey);
             // Broadcast 'stopped' globally so the UI instantly updates!
-            broadcastStatus(exePath, 'stopped');
+            broadcastStatus(processKey, 'stopped');
         });
 
     } catch (error) {
-        activeProcesses.delete(exePath);
-        finishGamePlaySession(exePath);
-        broadcastStatus(exePath, 'stopped');
+        activeProcesses.delete(processKey);
+        finishGamePlaySession(processKey);
+        broadcastStatus(processKey, 'stopped');
         throw new Error(`Failed to launch process: ${error.message}`);
     }
 
@@ -1132,6 +1278,170 @@ function saveGameToLibrary(newGameRecord) {
     fs.mkdirSync(path.dirname(libraryPath), { recursive: true });
     fs.writeFileSync(libraryPath, JSON.stringify(library, null, 2), 'utf8');
 }
+
+const minecraftLibraryPath = path.join(gamesDir, 'Minecraft');
+
+function listMinecraftVersions() {
+    if (!fs.existsSync(minecraftLibraryPath)) return [];
+    return fs.readdirSync(minecraftLibraryPath, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => entry.name)
+        .filter(version => fs.existsSync(path.join(minecraftLibraryPath, version, `${version}.json`))
+            && fs.existsSync(path.join(minecraftLibraryPath, version, `${version}.jar`))
+            && fs.existsSync(path.join(minecraftLibraryPath, version, '.installed')))
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+}
+
+ipcMain.handle('get-minecraft-versions', () => listMinecraftVersions());
+ipcMain.handle('get-available-minecraft-versions', async () => {
+    const response = await net.fetch('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json');
+    if (!response.ok) throw new Error(`Could not load Minecraft version list (HTTP ${response.status}).`);
+    const manifest = await response.json();
+    return manifest.versions
+        .filter(version => version.type === 'release')
+        .map(({ id, url, type }) => ({ id, url, type }));
+});
+
+ipcMain.handle('add-minecraft-library', async () => {
+    fs.mkdirSync(minecraftLibraryPath, { recursive: true });
+    const existing = readSavedGames().find(game => game.type === 'minecraft');
+    if (!existing) {
+        let artwork = {};
+        try { artwork = await fetchDefaultGameArtwork('Minecraft'); } catch (error) { console.warn('Could not load Minecraft artwork:', error); }
+        saveGameToLibrary({
+            name: 'Minecraft',
+            path: minecraftLibraryPath,
+            type: 'minecraft',
+            cover: artwork.cover || '',
+            hero: artwork.hero || '',
+            logo: artwork.logo || '',
+            version: listMinecraftVersions()[0] || ''
+        });
+    }
+    return { versions: listMinecraftVersions() };
+});
+
+async function downloadMinecraftFile(url, destination, expectedSha1) {
+    if (typeof url !== 'string' || !url.startsWith('https://')) throw new Error('Minecraft provided an invalid download URL.');
+    if (fs.existsSync(destination)) {
+        if (!expectedSha1) return;
+        const existingHash = await new Promise((resolve, reject) => {
+            const hash = require('crypto').createHash('sha1');
+            const stream = fs.createReadStream(destination);
+            stream.on('data', chunk => hash.update(chunk));
+            stream.on('error', reject);
+            stream.on('end', () => resolve(hash.digest('hex')));
+        });
+        if (existingHash.toLowerCase() === expectedSha1.toLowerCase()) return;
+    }
+    const response = await net.fetch(url);
+    if (!response.ok) throw new Error(`Minecraft download failed (HTTP ${response.status}): ${url}`);
+    const data = Buffer.from(await response.arrayBuffer());
+    if (expectedSha1) {
+        const actualHash = require('crypto').createHash('sha1').update(data).digest('hex');
+        if (actualHash.toLowerCase() !== expectedSha1.toLowerCase()) throw new Error(`Minecraft file checksum failed: ${url}`);
+    }
+    fs.mkdirSync(path.dirname(destination), { recursive: true });
+    const tempPath = destination + '.part';
+    fs.writeFileSync(tempPath, data);
+    fs.renameSync(tempPath, destination);
+}
+
+ipcMain.handle('install-minecraft-version', async (event, versionId) => {
+    if (typeof versionId !== 'string' || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Invalid Minecraft version.');
+    const manifestResponse = await net.fetch('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json');
+    if (!manifestResponse.ok) throw new Error('Could not load the official Minecraft version list.');
+    const manifest = await manifestResponse.json();
+    const versionEntry = manifest.versions.find(item => item.id === versionId && item.type === 'release');
+    if (!versionEntry) throw new Error(`Minecraft release ${versionId} was not found.`);
+
+    const versionResponse = await net.fetch(versionEntry.url);
+    if (!versionResponse.ok) throw new Error(`Could not load Minecraft ${versionId} metadata.`);
+    const versionData = await versionResponse.json();
+    const versionFolder = path.join(minecraftLibraryPath, versionId);
+    fs.mkdirSync(versionFolder, { recursive: true });
+    const installedMarkerPath = path.join(versionFolder, '.installed');
+    if (fs.existsSync(installedMarkerPath)) fs.unlinkSync(installedMarkerPath);
+    const versionJsonPath = path.join(versionFolder, `${versionId}.json`);
+    fs.writeFileSync(versionJsonPath, JSON.stringify(versionData, null, 2), 'utf8');
+
+    const files = [];
+    const addInstallFile = (url, sha1, relativePath) => {
+        if (typeof relativePath !== 'string' || path.isAbsolute(relativePath)) throw new Error('Minecraft provided an invalid install path.');
+        const destination = path.resolve(versionFolder, relativePath);
+        if (!destination.startsWith(versionFolder + path.sep)) throw new Error('Minecraft provided an unsafe install path.');
+        files.push({ url, sha1, path: destination });
+    };
+    if (versionData.downloads?.client) {
+        const item = versionData.downloads.client;
+        addInstallFile(item.url, item.sha1, `${versionId}.jar`);
+    } else {
+        throw new Error(`Minecraft ${versionId} has no client download.`);
+    }
+
+    for (const library of versionData.libraries || []) {
+        const artifact = library.downloads?.artifact;
+        if (artifact?.url && artifact.path) {
+            addInstallFile(artifact.url, artifact.sha1, path.join('libraries', artifact.path));
+        }
+        const nativeKey = library.natives?.windows?.replace('${arch}', process.arch === 'ia32' ? '32' : '64');
+        const native = nativeKey && library.downloads?.classifiers?.[nativeKey];
+        if (native?.url && native.path) {
+            addInstallFile(native.url, native.sha1, path.join('libraries', native.path));
+        }
+    }
+
+    const loggingFile = versionData.logging?.client?.file;
+    if (loggingFile?.url && loggingFile.id) {
+        addInstallFile(loggingFile.url, loggingFile.sha1, path.join('assets', 'log_configs', loggingFile.id));
+    }
+
+    let assetObjects = [];
+    const assetIndex = versionData.assetIndex;
+    if (assetIndex?.url && assetIndex.id) {
+        addInstallFile(assetIndex.url, assetIndex.sha1, path.join('assets', 'indexes', `${assetIndex.id}.json`));
+        const assetResponse = await net.fetch(assetIndex.url);
+        if (!assetResponse.ok) throw new Error(`Could not load Minecraft ${versionId} asset index.`);
+        const assetManifest = await assetResponse.json();
+        assetObjects = Object.values(assetManifest.objects || {});
+        for (const object of assetObjects) {
+            if (typeof object.hash !== 'string' || !/^[a-f0-9]{40}$/i.test(object.hash)) continue;
+            addInstallFile(
+                `https://resources.download.minecraft.net/${object.hash.slice(0, 2)}/${object.hash}`,
+                object.hash,
+                path.join('assets', 'objects', object.hash.slice(0, 2), object.hash)
+            );
+        }
+    }
+
+    const uniqueFiles = [...new Map(files.map(file => [file.path, file])).values()];
+
+    let completed = 0;
+    let nextFile = 0;
+    const worker = async () => {
+        while (nextFile < uniqueFiles.length) {
+            const file = uniqueFiles[nextFile++];
+            await downloadMinecraftFile(file.url, file.path, file.sha1);
+            completed++;
+            event.sender.send('minecraft-install-progress', { version: versionId, completed, total: uniqueFiles.length });
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(8, uniqueFiles.length) }, worker));
+    fs.writeFileSync(installedMarkerPath, new Date().toISOString(), 'utf8');
+
+    const games = readSavedGames();
+    let minecraftGame = games.find(game => game.type === 'minecraft');
+    if (!minecraftGame) {
+        let artwork = {};
+        try { artwork = await fetchDefaultGameArtwork('Minecraft'); } catch (error) { console.warn('Could not load Minecraft artwork:', error); }
+        minecraftGame = { name: 'Minecraft', path: minecraftLibraryPath, type: 'minecraft', cover: artwork.cover || '', hero: artwork.hero || '', logo: artwork.logo || '' };
+        games.push(minecraftGame);
+    }
+    minecraftGame.version = versionId;
+    minecraftGame.selectedMinecraftVersion = versionId;
+    fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+    return { version: versionId, files: uniqueFiles.length, assetObjects: assetObjects.length };
+});
 
 
 
