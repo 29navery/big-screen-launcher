@@ -230,7 +230,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             await ipcRenderer.invoke('launch-game-process', latestGame);
         }
         playSound('maximize_007');
-        } catch (error) { window.alert('Could not launch game: ' + error.message); }
+        } catch (error) {
+            const errorCover = document.getElementById("error-prompt-cover");
+            const errorPromptText = document.getElementById("error-prompt-text");
+            const errorPromptButton = document.getElementById("error-prompt-accept");
+
+            errorPromptText.textContent = error.message;
+            errorCover.style.display = "flex";
+
+            errorPromptButton.addEventListener("click", () => {
+                errorCover.style.display = "none";
+            });
+        }
     };
 });
 
@@ -343,8 +354,6 @@ async function setupMinecraftVersions() {
     const game = games[params.get('index')];
     if (!list || !dropdownButton) return;
     list.replaceChildren();
-    // Keep the selector visible for an empty Minecraft library so Add Installation
-    // remains reachable from #dropdown-menu before the first version is installed.
     dropdownButton.style.display = 'flex';
     if (!versions.length) {
         if (selectedLabel) selectedLabel.textContent = 'Minecraft — Add Version';
