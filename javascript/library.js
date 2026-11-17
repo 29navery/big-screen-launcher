@@ -54,16 +54,18 @@ async function renderGamesGrid() {
 
     games.forEach((game, index) => {
         const newDiv = document.createElement("div");
-        const newImg = document.createElement("img");
 
         newDiv.classList.add("grid-item");
         newDiv.dataset.id = index;
         
-        newImg.classList.add("grid-item");
         gameGrid.appendChild(newDiv);
-        newDiv.appendChild(newImg);
         
-        newImg.setAttribute("src", game.cover || "images/images.jpg");
+        if (game.cover !== null || "") {
+        const newImg = document.createElement("img");
+            newDiv.appendChild(newImg);
+            newImg.classList.add("grid-item");
+            newImg.setAttribute("src", game.cover);
+        }
         
         newDiv.addEventListener('animationend', () => {
             newDiv.style.animation = 'none';
