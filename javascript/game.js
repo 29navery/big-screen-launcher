@@ -408,7 +408,7 @@ async function loadVersions() {
             ipcRenderer.invoke('get-available-minecraft-versions'),
             ipcRenderer.invoke('get-minecraft-versions')
         ]);
-        if (!versions.length) versionBox.textContent = 'No Minecraft releases were returned.';
+        if (!versions.length) versionBox.textContent = 'No Minecraft releases were found.';
         versions.forEach(version => {
             const option = document.createElement('button');
             option.type = 'button';

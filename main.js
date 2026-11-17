@@ -380,7 +380,20 @@ ipcMain.handle('get-game-metadata', async (event, gamePath, gameType) => {
 ipcMain.handle('load-games', () => {
     try {
         if (fs.existsSync(gamesFilePath)) {
-            return JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
+            const games = JSON.parse(fs.readFileSync(gamesFilePath, 'utf8'));
+            if (!Array.isArray(games)) return [];
+            let migrated = false;
+            for (const game of games) {
+                if (game.type?.toLowerCase() === 'minecraft' || game.name?.toLowerCase() === 'minecraft') {
+                    if (game.path !== minecraftLibraryPath || game.type !== 'minecraft') {
+                        game.path = minecraftLibraryPath;
+                        game.type = 'minecraft';
+                        migrated = true;
+                    }
+                }
+            }
+            if (migrated) fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
+            return games;
         }
     } catch (err) {
         console.error("Could not load games file:", err);
@@ -390,6 +403,14 @@ ipcMain.handle('load-games', () => {
 
 ipcMain.handle('save-games', (event, gamesArray) => {
     try {
+        if (Array.isArray(gamesArray)) {
+            for (const game of gamesArray) {
+                if (game.type?.toLowerCase() === 'minecraft' || game.name?.toLowerCase() === 'minecraft') {
+                    game.path = minecraftLibraryPath;
+                    game.type = 'minecraft';
+                }
+            }
+        }
         fs.writeFileSync(gamesFilePath, JSON.stringify(gamesArray, null, 2), 'utf8');
         return true;
     } catch (err) {
@@ -717,7 +738,12 @@ function resolveJavaExecutable(requiredMajor) {
 function prepareMinecraftLaunch(game) {
     const versionId = game.selectedMinecraftVersion || game.version;
     if (!versionId || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Choose a Minecraft installation first.');
-    const versionFolder = path.join(game.path, versionId);
+    const priorGamePath = game.path;
+    game.path = minecraftLibraryPath;
+    if (typeof priorGamePath === 'string' && priorGamePath !== minecraftLibraryPath) {
+        updateSavedGame(priorGamePath, saved => { saved.path = minecraftLibraryPath; });
+    }
+    const versionFolder = path.join(minecraftLibraryPath, versionId);
     const metadataPath = path.join(versionFolder, `${versionId}.json`);
     const clientJar = path.join(versionFolder, `${versionId}.jar`);
     if (!fs.existsSync(path.join(versionFolder, '.installed')) || !fs.existsSync(metadataPath) || !fs.existsSync(clientJar)) {
@@ -1304,7 +1330,8 @@ ipcMain.handle('get-available-minecraft-versions', async () => {
 
 ipcMain.handle('add-minecraft-library', async () => {
     fs.mkdirSync(minecraftLibraryPath, { recursive: true });
-    const existing = readSavedGames().find(game => game.type === 'minecraft');
+    const games = readSavedGames();
+    const existing = games.find(game => game.type === 'minecraft' || game.name?.toLowerCase() === 'minecraft');
     if (!existing) {
         let artwork = {};
         try { artwork = await fetchDefaultGameArtwork('Minecraft'); } catch (error) { console.warn('Could not load Minecraft artwork:', error); }
@@ -1317,6 +1344,10 @@ ipcMain.handle('add-minecraft-library', async () => {
             logo: artwork.logo || '',
             version: listMinecraftVersions()[0] || ''
         });
+    } else if (existing.path !== minecraftLibraryPath || existing.type !== 'minecraft') {
+        existing.path = minecraftLibraryPath;
+        existing.type = 'minecraft';
+        fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
     }
     return { versions: listMinecraftVersions() };
 });
@@ -1430,13 +1461,15 @@ ipcMain.handle('install-minecraft-version', async (event, versionId) => {
     fs.writeFileSync(installedMarkerPath, new Date().toISOString(), 'utf8');
 
     const games = readSavedGames();
-    let minecraftGame = games.find(game => game.type === 'minecraft');
+    let minecraftGame = games.find(game => game.type === 'minecraft' || game.name?.toLowerCase() === 'minecraft');
     if (!minecraftGame) {
         let artwork = {};
         try { artwork = await fetchDefaultGameArtwork('Minecraft'); } catch (error) { console.warn('Could not load Minecraft artwork:', error); }
         minecraftGame = { name: 'Minecraft', path: minecraftLibraryPath, type: 'minecraft', cover: artwork.cover || '', hero: artwork.hero || '', logo: artwork.logo || '' };
         games.push(minecraftGame);
     }
+    minecraftGame.path = minecraftLibraryPath;
+    minecraftGame.type = 'minecraft';
     minecraftGame.version = versionId;
     minecraftGame.selectedMinecraftVersion = versionId;
     fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
