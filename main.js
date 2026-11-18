@@ -59,6 +59,26 @@ function getSavedMinecraftAccount() {
     catch { return null; }
 }
 
+function getLocalMinecraftProfileName() {
+    const profileName = path.basename(app.getPath('home'))
+        .replace(/[^A-Za-z0-9_]/g, '')
+        .slice(0, 16);
+    return profileName || 'Player';
+}
+
+function getOfflineMinecraftUuid(username) {
+    const uuid = crypto.createHash('md5').update(`OfflinePlayer:${username}`, 'utf8').digest();
+    uuid[6] = (uuid[6] & 0x0f) | 0x30;
+    uuid[8] = (uuid[8] & 0x3f) | 0x80;
+    return uuid.toString('hex');
+}
+
+function getOfflineMinecraftSession() {
+    const minecraftName = getLocalMinecraftProfileName();
+    const profile = { minecraftName, minecraftUuid: getOfflineMinecraftUuid(minecraftName), xuid: '' };
+    return { profile, accessToken: '0', expiresAt: Number.POSITIVE_INFINITY, isOffline: true };
+}
+
 function handleMicrosoftRedirect(rawUrl) {
     if (!pendingMicrosoftSignIn || typeof rawUrl !== 'string') return;
     let callback;
@@ -217,6 +237,7 @@ async function refreshMinecraftSession() {
 
 async function getMinecraftSession() {
     if (cachedMinecraftSession && cachedMinecraftSession.expiresAt > Date.now() + 60_000) return cachedMinecraftSession;
+    if (!fs.existsSync(minecraftRefreshTokenPath)) return getOfflineMinecraftSession();
     return refreshMinecraftSession();
 }
 
@@ -995,7 +1016,11 @@ async function prepareMinecraftLaunch(game) {
 
     const username = minecraftSession.profile.minecraftName;
     const minecraftUuid = String(minecraftSession.profile.minecraftUuid || '').replace(/-/g, '');
-    if (!username || !/^[a-f0-9]{32}$/i.test(minecraftUuid)) throw new Error('The signed-in Microsoft account has no valid Minecraft Java profile.');
+    if (!username || !/^[a-f0-9]{32}$/i.test(minecraftUuid)) {
+        throw new Error(minecraftSession.isOffline
+            ? 'The local Minecraft profile is invalid.'
+            : 'The signed-in Microsoft account has no valid Minecraft Java profile.');
+    }
     const assetIndex = metadata.assetIndex || {};
     const loggingFile = metadata.logging?.client?.file;
     const variables = {
@@ -1006,10 +1031,10 @@ async function prepareMinecraftLaunch(game) {
         assets_index_name: assetIndex.id || '',
         auth_uuid: minecraftUuid,
         auth_access_token: minecraftSession.accessToken,
-        user_type: 'msa',
+        user_type: minecraftSession.isOffline ? 'legacy' : 'msa',
         version_type: metadata.type || 'release',
         user_properties: '{}',
-        clientid: MICROSOFT_CLIENT_ID,
+        clientid: minecraftSession.isOffline ? '' : MICROSOFT_CLIENT_ID,
         auth_xuid: minecraftSession.profile.xuid || '',
         natives_directory: nativesDirectory,
         library_directory: path.join(versionFolder, 'libraries'),

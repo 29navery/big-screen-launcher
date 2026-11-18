@@ -4,7 +4,7 @@ This game launcher features:
 - Importing and managing your games
 - Downloading pre-installed games
 - Installing & managing Minecraft installations in-house
-  - Microsoft account connection coming soon!
+  - Launching with a Microsoft account or a local offline profile
 - Customizing your launcher experience
 - A built-in music player
   - Import your own songs!
