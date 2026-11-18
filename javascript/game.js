@@ -187,8 +187,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    if (game.type?.toLowerCase() === 'minecraft' || game.name?.toLowerCase() === 'minecraft') {
+    const isMinecraft = game.type?.toLowerCase() === 'minecraft' || game.name?.toLowerCase() === 'minecraft';
+    const microsoftContainer = document.getElementById('ms-container');
+    const microsoftSignInButton = document.getElementById('minecraft-signin-button');
+    const xboxProfileContainer = document.getElementById('xbla-profile-container');
+    const microsoftDivider = document.getElementById('ms-hr');
+    const xboxProfilePicture = document.getElementById('xbla-profile-picture');
+    const xboxUsername = document.getElementById('xbla-username');
+
+    if (microsoftContainer) microsoftContainer.style.display = isMinecraft ? 'block' : 'none';
+
+    const renderMicrosoftAccount = profile => {
+        const signedIn = !!profile;
+        if (xboxProfileContainer) xboxProfileContainer.style.display = signedIn ? 'flex' : 'none';
+        if (microsoftDivider) microsoftDivider.style.display = signedIn ? 'block' : 'none';
+        if (microsoftSignInButton) microsoftSignInButton.textContent = signedIn ? 'Sign out' : 'Sign into Microsoft';
+        if (xboxUsername) xboxUsername.textContent = signedIn ? (profile.xboxUsername || profile.minecraftName || '') : '';
+        if (xboxProfilePicture) {
+            xboxProfilePicture.src = signedIn ? (profile.xboxPicture || '') : '';
+            xboxProfilePicture.style.display = signedIn && !!profile.xboxPicture ? 'block' : 'none';
+        }
+    };
+
+    if (isMinecraft) {
         await setupMinecraftVersions();
+        try { renderMicrosoftAccount(await ipcRenderer.invoke('get-minecraft-account')); }
+        catch (error) { console.warn('Could not load signed-in Minecraft account:', error); }
+        if (microsoftSignInButton) {
+            microsoftSignInButton.addEventListener('click', async () => {
+                microsoftSignInButton.disabled = true;
+                try {
+                    const account = await ipcRenderer.invoke(
+                        microsoftSignInButton.textContent === 'Sign out' ? 'sign-out-minecraft' : 'sign-in-minecraft'
+                    );
+                    renderMicrosoftAccount(account === true ? null : account);
+                } catch (error) {
+                    window.alert(`Microsoft sign-in failed: ${error.message}`);
+                } finally {
+                    microsoftSignInButton.disabled = false;
+                }
+            });
+        }
     }
 
     const launchOptionsInput = document.getElementById('launch-options-input');

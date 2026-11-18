@@ -3,9 +3,12 @@
 This game launcher features:
 - Importing and managing your games
 - Downloading pre-installed games
+- Installing & managing Minecraft installations in-house
+  - Microsoft account connection coming soon!
 - Customizing your launcher experience
 - A built-in music player
   - Import your own songs!
+  - functioning iPod Nano that can float on your desktop! 
 
 Read more at [tungstenball.org](https://tungstenball.org/launcher)!
 

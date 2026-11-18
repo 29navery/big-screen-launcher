@@ -117,8 +117,13 @@
                 </div>
 
                 <!-- Microsoft Account Partition -->
-                <div class="button-container">
-                    <button style="margin-top: 0;" class="normal-button">Sign into Microsoft</button>
+                <div class="ms-container" id="ms-container" style="display: none;">
+                    <button id="minecraft-signin-button" style="margin-top: 0;" class="normal-button">Sign into Microsoft</button>
+                    <hr style="border-color: #666; display: none;" id="ms-hr">
+                    <div id="xbla-profile-container" style="display: none; flex-flow: row nowrap; gap: 5px;">
+                        <img id="xbla-profile-picture" src="">
+                        <p id="xbla-username"></p>
+                    </div>
                 </div>
 
                 <div id="button-container">

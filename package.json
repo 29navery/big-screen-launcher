@@ -12,6 +12,14 @@
   "build": {
     "appId": "com.nickylul.BSL",
     "productName": "Big Screen Launcher",
+    "protocols": [
+      {
+        "name": "Big Screen Launcher Microsoft Sign-in",
+        "schemes": [
+          "msal4dd96d7c-71f0-4bf2-8903-509778a4d30a"
+        ]
+      }
+    ],
     "publish": [
       {
         "provider": "github",

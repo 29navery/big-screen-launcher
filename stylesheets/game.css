@@ -240,7 +240,7 @@
     border-radius: 13px;
 }
 
-.button-container {
+.ms-container {
     background-color: var(--bg-color);
     width: fit-content;
     height: fit-content;
@@ -253,8 +253,19 @@
     border-radius: 13px;
 }
 
-.button-container > button {
+.ms-container > button {
     border-radius: 6px;
+}
+
+.ms-container p {
+    margin: 0;
+    margin-top: 7px;
+}
+
+.ms-container img {
+    border-radius: 6px;
+    width: 30px;
+    margin: 0;
 }
 
 .play-button {

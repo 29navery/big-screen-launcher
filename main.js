@@ -1,5 +1,5 @@
 // hello I am the electron script
-const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session, net } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, dialog, shell, session, net, safeStorage } = require('electron');
 // Only the first process should initialize the launcher.
 if (!app.requestSingleInstanceLock()) {
     app.quit();
@@ -10,6 +10,7 @@ const { autoUpdater } = require('electron-updater');
 const { spawn, spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 // settings because everything is a loser and hates when I call it before it exists
 const bslDir = path.join(app.getPath('documents'), 'Big Screen Launcher');
@@ -32,6 +33,213 @@ let audioWindow;
 let tray = null;
 let isQuitting = false;
 
+const MICROSOFT_CLIENT_ID = '4dd96d7c-71f0-4bf2-8903-509778a4d30a';
+const MICROSOFT_REDIRECT_URI = `msal${MICROSOFT_CLIENT_ID}://auth`;
+const MICROSOFT_PROTOCOL = `msal${MICROSOFT_CLIENT_ID}`;
+const minecraftAccountPath = path.join(app.getPath('userData'), 'minecraft-account.json');
+const minecraftRefreshTokenPath = path.join(app.getPath('userData'), 'minecraft-refresh-token.bin');
+let pendingMicrosoftSignIn = null;
+let cachedMinecraftSession = null;
+
+function saveMinecraftRefreshToken(refreshToken) {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Secure token storage is unavailable on this device.');
+    fs.mkdirSync(path.dirname(minecraftRefreshTokenPath), { recursive: true });
+    fs.writeFileSync(minecraftRefreshTokenPath, safeStorage.encryptString(refreshToken));
+}
+
+function readMinecraftRefreshToken() {
+    if (!fs.existsSync(minecraftRefreshTokenPath)) return null;
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Secure token storage is unavailable on this device.');
+    return safeStorage.decryptString(fs.readFileSync(minecraftRefreshTokenPath));
+}
+
+function getSavedMinecraftAccount() {
+    if (!fs.existsSync(minecraftAccountPath) || !fs.existsSync(minecraftRefreshTokenPath)) return null;
+    try { return JSON.parse(fs.readFileSync(minecraftAccountPath, 'utf8')); }
+    catch { return null; }
+}
+
+function handleMicrosoftRedirect(rawUrl) {
+    if (!pendingMicrosoftSignIn || typeof rawUrl !== 'string') return;
+    let callback;
+    try { callback = new URL(rawUrl); } catch { return; }
+    if (callback.protocol !== `${MICROSOFT_PROTOCOL}:` || callback.hostname !== 'auth') return;
+
+    const pending = pendingMicrosoftSignIn;
+    pendingMicrosoftSignIn = null;
+    clearTimeout(pending.timeout);
+    if (callback.searchParams.get('state') !== pending.state) {
+        pending.reject(new Error('Microsoft sign-in state validation failed. Please try again.'));
+    } else if (callback.searchParams.has('error')) {
+        pending.reject(new Error(callback.searchParams.get('error_description') || callback.searchParams.get('error')));
+    } else if (!callback.searchParams.get('code')) {
+        pending.reject(new Error('Microsoft did not return an authorization code.'));
+    } else {
+        pending.resolve({ code: callback.searchParams.get('code'), verifier: pending.verifier });
+    }
+    focusMainWindow();
+}
+
+function extractMicrosoftRedirect(args) {
+    return args.find(argument => typeof argument === 'string' && argument.startsWith(`${MICROSOFT_PROTOCOL}://`));
+}
+
+function beginMicrosoftSignIn() {
+    if (pendingMicrosoftSignIn) throw new Error('Microsoft sign-in is already in progress.');
+    const verifier = crypto.randomBytes(32).toString('base64url');
+    const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+    const state = crypto.randomBytes(24).toString('hex');
+    const authorizeUrl = new URL('https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize');
+    authorizeUrl.search = new URLSearchParams({
+        client_id: MICROSOFT_CLIENT_ID,
+        response_type: 'code',
+        redirect_uri: MICROSOFT_REDIRECT_URI,
+        response_mode: 'query',
+        scope: 'XboxLive.signin XboxLive.offline_access',
+        code_challenge: challenge,
+        code_challenge_method: 'S256',
+        state,
+        prompt: 'select_account'
+    }).toString();
+
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            if (pendingMicrosoftSignIn?.state !== state) return;
+            pendingMicrosoftSignIn = null;
+            reject(new Error('Microsoft sign-in timed out. Please try again.'));
+        }, 5 * 60 * 1000);
+        pendingMicrosoftSignIn = { resolve, reject, state, verifier, challenge, timeout };
+        shell.openExternal(authorizeUrl.toString()).catch(error => {
+            clearTimeout(timeout);
+            pendingMicrosoftSignIn = null;
+            reject(error);
+        });
+    });
+}
+
+async function requestJson(url, options, label) {
+    const response = await net.fetch(url, options);
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const description = body.error_description || body.errorMessage || body.Message || body.message || body.error || `HTTP ${response.status}`;
+        const endpointPath = body.path ? ` (${body.path})` : '';
+        throw new Error(`${label} (HTTP ${response.status})${endpointPath}: ${description}`);
+    }
+    return body;
+}
+
+async function exchangeMicrosoftCode(code, verifier) {
+    const body = new URLSearchParams({
+        client_id: MICROSOFT_CLIENT_ID,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: MICROSOFT_REDIRECT_URI,
+        code_verifier: verifier,
+        scope: 'XboxLive.signin XboxLive.offline_access'
+    });
+    return requestJson('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString()
+    }, 'Microsoft token exchange failed');
+}
+
+async function getMinecraftSessionFromMicrosoftToken(msAccessToken) {
+    const xbl = await requestJson('https://user.auth.xboxlive.com/user/authenticate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-xbl-contract-version': '1' },
+        body: JSON.stringify({
+            Properties: { AuthMethod: 'RPS', SiteName: 'user.auth.xboxlive.com', RpsTicket: `d=${msAccessToken}` },
+            RelyingParty: 'http://auth.xboxlive.com', TokenType: 'JWT'
+        })
+    }, 'Xbox sign-in failed');
+    const xsts = await requestJson('https://xsts.auth.xboxlive.com/xsts/authorize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-xbl-contract-version': '1' },
+        body: JSON.stringify({
+            Properties: { SandboxId: 'RETAIL', UserTokens: [xbl.Token] },
+            RelyingParty: 'rp://api.minecraftservices.com/', TokenType: 'JWT'
+        })
+    }, 'Xbox security check failed');
+    const xui = xsts.DisplayClaims?.xui?.[0] || xbl.DisplayClaims?.xui?.[0] || {};
+    if (!xui.uhs || !xsts.Token) throw new Error('Xbox did not return a valid security token.');
+
+    const minecraft = await requestJson('https://api.minecraftservices.com/authentication/login_with_xbox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identityToken: `XBL3.0 x=${xui.uhs};${xsts.Token}` })
+    }, 'Minecraft sign-in failed');
+    const entitlements = await requestJson('https://api.minecraftservices.com/entitlements/mcstore', {
+        headers: { Authorization: `Bearer ${minecraft.access_token}` }
+    }, 'Could not check Minecraft ownership');
+    const ownsJava = (entitlements.items || []).some(item => ['game_minecraft', 'product_minecraft'].includes(String(item.name || '').toLowerCase()));
+    if (!ownsJava) throw new Error('This Microsoft account does not appear to own Minecraft: Java Edition or have an eligible Game Pass subscription.');
+
+    const javaProfile = await requestJson('https://api.minecraftservices.com/minecraft/profile', {
+        headers: { Authorization: `Bearer ${minecraft.access_token}` }
+    }, 'Could not load the Minecraft profile');
+    let xboxProfile = {};
+    try {
+        xboxProfile = await requestJson('https://profile.xboxlive.com/users/me/profile/settings?settings=GameDisplayName,GameDisplayPicRaw,ModernGamertag,Gamertag', {
+            headers: { Authorization: `XBL3.0 x=${xui.uhs};${xsts.Token}`, 'x-xbl-contract-version': '2' }
+        }, 'Could not load Xbox profile');
+    } catch (error) {
+        console.warn('Xbox profile details unavailable:', error.message);
+    }
+    const profileUser = xboxProfile.profileUsers?.[0] || {};
+    const profileSettings = Object.fromEntries((profileUser.settings || []).map(setting => [setting.id, setting.value]));
+    const profile = {
+        minecraftName: javaProfile.name,
+        minecraftUuid: javaProfile.id,
+        xboxUsername: profileSettings.GameDisplayName || profileSettings.ModernGamertag || profileSettings.Gamertag || javaProfile.name,
+        xboxPicture: profileSettings.GameDisplayPicRaw || '',
+        xuid: profileUser.id || xui.xid || xui.xuid || ''
+    };
+    return { profile, session: { accessToken: minecraft.access_token, expiresAt: Date.now() + (minecraft.expires_in || 3600) * 1000, profile } };
+}
+
+async function refreshMinecraftSession() {
+    const refreshToken = readMinecraftRefreshToken();
+    if (!refreshToken) throw new Error('Sign in to your Microsoft account before launching Minecraft.');
+    const body = new URLSearchParams({
+        client_id: MICROSOFT_CLIENT_ID,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        scope: 'XboxLive.signin XboxLive.offline_access'
+    });
+    const refreshed = await requestJson('https://login.microsoftonline.com/consumers/oauth2/v2.0/token', {
+        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body.toString()
+    }, 'Microsoft session refresh failed. Sign in again');
+    if (refreshed.refresh_token) saveMinecraftRefreshToken(refreshed.refresh_token);
+    const result = await getMinecraftSessionFromMicrosoftToken(refreshed.access_token);
+    fs.writeFileSync(minecraftAccountPath, JSON.stringify(result.profile, null, 2), 'utf8');
+    cachedMinecraftSession = result.session;
+    return result.session;
+}
+
+async function getMinecraftSession() {
+    if (cachedMinecraftSession && cachedMinecraftSession.expiresAt > Date.now() + 60_000) return cachedMinecraftSession;
+    return refreshMinecraftSession();
+}
+
+ipcMain.handle('get-minecraft-account', () => getSavedMinecraftAccount());
+ipcMain.handle('sign-in-minecraft', async () => {
+    const { code, verifier } = await beginMicrosoftSignIn();
+    const microsoftTokens = await exchangeMicrosoftCode(code, verifier);
+    if (!microsoftTokens.access_token || !microsoftTokens.refresh_token) throw new Error('Microsoft did not return the tokens required for Xbox and Minecraft sign-in.');
+    const result = await getMinecraftSessionFromMicrosoftToken(microsoftTokens.access_token);
+    saveMinecraftRefreshToken(microsoftTokens.refresh_token);
+    fs.mkdirSync(path.dirname(minecraftAccountPath), { recursive: true });
+    fs.writeFileSync(minecraftAccountPath, JSON.stringify(result.profile, null, 2), 'utf8');
+    cachedMinecraftSession = result.session;
+    return result.profile;
+});
+ipcMain.handle('sign-out-minecraft', () => {
+    cachedMinecraftSession = null;
+    for (const file of [minecraftRefreshTokenPath, minecraftAccountPath]) {
+        if (fs.existsSync(file)) fs.unlinkSync(file);
+    }
+    return true;
+});
+
 function focusMainWindow() {
     if (!mainWindow || mainWindow.isDestroyed()) {
         createWindow();
@@ -41,8 +249,15 @@ function focusMainWindow() {
     mainWindow.focus();
 }
 
-app.on('second-instance', () => {
+app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleMicrosoftRedirect(url);
+});
+
+app.on('second-instance', (_event, commandLine) => {
     app.whenReady().then(focusMainWindow);
+    const redirectUrl = extractMicrosoftRedirect(commandLine);
+    if (redirectUrl) handleMicrosoftRedirect(redirectUrl);
 });
 
 autoUpdater.autoDownload = true;
@@ -86,6 +301,13 @@ const createWindow = () => {
 
 app.whenReady().then(() => {
     app.setName('Big Screen Launcher');
+    if (process.defaultApp && process.argv[1]) {
+        app.setAsDefaultProtocolClient(MICROSOFT_PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
+    } else {
+        app.setAsDefaultProtocolClient(MICROSOFT_PROTOCOL);
+    }
+    const initialMicrosoftRedirect = extractMicrosoftRedirect(process.argv);
+    if (initialMicrosoftRedirect) handleMicrosoftRedirect(initialMicrosoftRedirect);
     if (process.platform === 'win32') {
         app.setAppUserModelId('Big Screen Launcher');
     }
@@ -738,7 +960,8 @@ function resolveJavaExecutable(requiredMajor) {
     throw new Error(`Minecraft requires Java ${requiredMajor} or newer. ${found.length ? `Found: ${found.join(', ')}.` : 'Install a compatible Java runtime or install one with the official Minecraft Launcher.'}`);
 }
 
-function prepareMinecraftLaunch(game) {
+async function prepareMinecraftLaunch(game) {
+    const minecraftSession = await getMinecraftSession();
     const versionId = game.selectedMinecraftVersion || game.version;
     if (!versionId || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Choose a Minecraft installation first.');
     const priorGamePath = game.path;
@@ -770,9 +993,9 @@ function prepareMinecraftLaunch(game) {
         extractMinecraftNatives(library, versionFolder, nativesDirectory);
     }
 
-    const username = (process.env.USERNAME || 'Player').replace(/[^A-Za-z0-9_]/g, '').slice(0, 16) || 'Player';
-    const offlineUuidHex = require('crypto').createHash('md5').update(`OfflinePlayer:${username}`).digest('hex');
-    const offlineUuid = `${offlineUuidHex.slice(0, 8)}-${offlineUuidHex.slice(8, 12)}-${offlineUuidHex.slice(12, 16)}-${offlineUuidHex.slice(16, 20)}-${offlineUuidHex.slice(20)}`;
+    const username = minecraftSession.profile.minecraftName;
+    const minecraftUuid = String(minecraftSession.profile.minecraftUuid || '').replace(/-/g, '');
+    if (!username || !/^[a-f0-9]{32}$/i.test(minecraftUuid)) throw new Error('The signed-in Microsoft account has no valid Minecraft Java profile.');
     const assetIndex = metadata.assetIndex || {};
     const loggingFile = metadata.logging?.client?.file;
     const variables = {
@@ -781,13 +1004,13 @@ function prepareMinecraftLaunch(game) {
         game_directory: game.path,
         assets_root: path.join(versionFolder, 'assets'),
         assets_index_name: assetIndex.id || '',
-        auth_uuid: offlineUuid,
-        auth_access_token: '0',
-        user_type: 'legacy',
+        auth_uuid: minecraftUuid,
+        auth_access_token: minecraftSession.accessToken,
+        user_type: 'msa',
         version_type: metadata.type || 'release',
         user_properties: '{}',
-        clientid: '0',
-        auth_xuid: '0',
+        clientid: MICROSOFT_CLIENT_ID,
+        auth_xuid: minecraftSession.profile.xuid || '',
         natives_directory: nativesDirectory,
         library_directory: path.join(versionFolder, 'libraries'),
         classpath: classpathEntries.join(path.delimiter),
@@ -848,7 +1071,7 @@ ipcMain.handle('launch-game-process', async (event, game) => {
     let launchArgs = [];
     let processKey = '';
     if (game.type === 'minecraft') {
-        const minecraftLaunch = prepareMinecraftLaunch(game);
+        const minecraftLaunch = await prepareMinecraftLaunch(game);
         launchPath = minecraftLaunch.javaPath;
         launchArgs = minecraftLaunch.launchArgs;
         processKey = minecraftLaunch.processKey;
