@@ -240,6 +240,23 @@
     border-radius: 13px;
 }
 
+.button-container {
+    background-color: var(--bg-color);
+    width: fit-content;
+    height: fit-content;
+    position: absolute;
+    padding: 8px;
+    padding-right: 12px;
+    padding-top: 12px;
+    top: 0px;
+    right: -10px;
+    border-radius: 13px;
+}
+
+.button-container > button {
+    border-radius: 6px;
+}
+
 .play-button {
     border-radius: 7px;
     background-color: rgb(61, 177, 31);
