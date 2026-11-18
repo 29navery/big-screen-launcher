@@ -363,6 +363,11 @@
 
 /*  WINDOWS AND COVER  */
 
+#error-prompt-window {
+    height: 260px;
+    width: 450px;
+}
+
 #error-prompt-no {
     width: 120px;
 }
@@ -390,8 +395,8 @@
     flex-direction: column;
     padding: 15px;
 
-    width: 500px;
-    height: 300px;
+    width: 600px;
+    height: 500px;
     background-color: var(--prompt-window-color);
     border-radius: 10px;
     border: 1.65px solid var(--prompt-window-outline-color);

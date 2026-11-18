@@ -469,7 +469,7 @@ async function loadVersions() {
             const isInstalled = installed.includes(version.id);
             const isQueued = pendingMinecraftTitles.has(`Minecraft ${version.id}`);
             option.disabled = isInstalled || isQueued;
-            option.textContent = `Minecraft ${version.id}${isInstalled ? ' (Installed)' : isQueued ? ' (Queued)' : ' — Download'}`;
+            option.textContent = `Minecraft ${version.id}${isInstalled ? ' (Installed)' : isQueued ? ' (Queued)' : ''}`;
             option.addEventListener('click', async () => {
                 option.disabled = true;
                 statusText.textContent = `Queued Minecraft ${version.id}…`;
