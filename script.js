@@ -97,3 +97,39 @@ const numberBox = document.getElementById('version-number');
 ipcRenderer.invoke('get-app-version').then((version) => {
     numberBox.textContent = 'v' + version;
 });
+
+// big boy master downloads bar
+const topbarDownloadsContainer = document.getElementById('topbar-download-container');
+const topbarDownloadsText = document.getElementById('topbar-download-text');
+const topbarDownloadsProgress = document.getElementById('topbar-download-progress');
+
+function renderTopbarDownload(state) {
+    if (!topbarDownloadsContainer) return;
+    const active = state?.active;
+    if (!active) {
+        topbarDownloadsContainer.style.display = 'none';
+        if (topbarDownloadsProgress) topbarDownloadsProgress.style.width = '0%';
+        return;
+    }
+
+    topbarDownloadsContainer.style.display = 'flex';
+    const progress = active.progress || {};
+    if (topbarDownloadsText) {
+        const detail = progress.etaStr || 'Starting…';
+        topbarDownloadsText.textContent = `${active.title} — ${detail}`;
+    }
+    if (topbarDownloadsProgress) {
+        topbarDownloadsProgress.style.width = `${Math.max(0, Math.min(100, Number(progress.percent) || 0))}%`;
+    }
+}
+
+if (topbarDownloadsContainer) topbarDownloadsContainer.style.display = 'none';
+ipcRenderer.on('download-state', (_event, state) => renderTopbarDownload(state));
+ipcRenderer.on('download-progress', (_event, progress) => {
+    if (!topbarDownloadsContainer) return;
+    if (progress.status === 'completed' || progress.status === 'cancelled' || progress.status === 'failed') return;
+    topbarDownloadsContainer.style.display = 'flex';
+    if (topbarDownloadsText) topbarDownloadsText.textContent = `${progress.title || progress.gameName} — ${progress.etaStr || 'Downloading…'}`;
+    if (topbarDownloadsProgress) topbarDownloadsProgress.style.width = `${Math.max(0, Math.min(100, Number(progress.percent) || 0))}%`;
+});
+ipcRenderer.invoke('get-download-state').then(renderTopbarDownload).catch(error => console.warn('Could not read download state:', error));

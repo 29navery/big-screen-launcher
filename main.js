@@ -614,7 +614,10 @@ const AdmZip = require('adm-zip');
 const unrar = require('node-unrar-js');
 const { settings } = require('cluster');
 
-let activeDownloadReq = null;
+let downloadQueue = [];
+let activeDownloadJob = null;
+let activeDownloadController = null;
+let downloadQueueRunning = false;
 
 // processes
 const activeProcesses = new Map()
@@ -1105,167 +1108,206 @@ async function extractArchive(archivePath, destFolder) {
     }
 }
 
-// start download
-ipcMain.handle('start-download', async (event, payload) => {
+function getDownloadState() {
+    return {
+        active: activeDownloadJob ? {
+            id: activeDownloadJob.id,
+            type: activeDownloadJob.type,
+            title: activeDownloadJob.title,
+            progress: activeDownloadJob.progress || null
+        } : null,
+        queue: downloadQueue.map(job => ({ id: job.id, type: job.type, title: job.title, size: job.payload?.size || '' }))
+    };
+}
+
+function broadcastDownloadState() {
+    const state = getDownloadState();
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) win.webContents.send('download-state', state);
+    });
+}
+
+function reportDownloadProgress(job, details) {
+    job.progress = { ...details, type: job.type, title: job.title };
+    BrowserWindow.getAllWindows().forEach(win => {
+        if (!win.isDestroyed()) {
+            win.webContents.send('download-progress', job.progress);
+            if (job.type === 'minecraft' && details.completed !== undefined) {
+                win.webContents.send('minecraft-install-progress', { version: job.version, completed: details.completed, total: details.total });
+            }
+        }
+    });
+}
+
+async function performGameDownload(payload, job, signal) {
     let zipPath = '';
     try {
         const { gameName, downloadUrl, exeName, version, cover } = payload;
+        if (!downloadUrl) throw new Error('No download URL provided.');
 
-        if (!downloadUrl) {
-            throw new Error('No download URL provided.');
-        }
-
-        const gameFolder = path.join(
-            app.getPath('documents'),
-            'Big Screen Launcher',
-            'Games',
-            gameName
-        );
-        
+        const gameFolder = path.join(app.getPath('documents'), 'Big Screen Launcher', 'Games', gameName);
         fs.mkdirSync(gameFolder, { recursive: true });
         zipPath = path.join(gameFolder, 'download_temp.zip');
-        const fileStream = fs.createWriteStream(zipPath);
 
-        // Uses Chromium's network stack (same as Google Chrome!)
-        const response = await net.fetch(downloadUrl);
-
-        if (!response.ok) {
-            throw new Error(`Server returned HTTP ${response.status}`);
-        }
-
+        const response = await net.fetch(downloadUrl, { signal });
+        if (!response.ok) throw new Error(`Server returned HTTP ${response.status}`);
         const totalBytes = parseInt(response.headers.get('content-length') || '0', 10);
         let transferredBytes = 0;
-        let startTime = Date.now();
-
-        // Read chunks using Chromium's native stream reader
+        const startTime = Date.now();
         const reader = response.body.getReader();
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            transferredBytes += value.length;
-            fileStream.write(value);
-
-            if (totalBytes > 0) {
-                const percent = (transferredBytes / totalBytes) * 100;
-                const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
-                const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
-                
-                const elapsedSec = (Date.now() - startTime) / 1000;
-                const speedBytesPerSec = transferredBytes / elapsedSec;
-                const remainingSec = Math.ceil((totalBytes - transferredBytes) / (speedBytesPerSec || 1));
-
-                const mins = Math.floor(remainingSec / 60);
-                const secs = remainingSec % 60;
-
-                event.sender.send('download-progress', {
-                    status: 'downloading',
-                    gameName,
-                    percent,
-                    transferredMB,
-                    totalMB,
-                    etaStr: `${mins}m ${secs}s left`
-                });
-            }
-        }
-
-        fileStream.end(async () => {
-            try {
-                event.sender.send('download-progress', {
-                    status: 'downloading',
-                    gameName,
-                    percent: 100,
-                    transferredMB: '',
-                    totalMB: '',
-                    etaStr: 'Extracting game files...'
-                });
-
-                await extractArchive(zipPath, gameFolder);
-
-                if (fs.existsSync(zipPath)) {
-                    fs.unlinkSync(zipPath);
-                }
-
-                flattenIfSingleSubfolder(gameFolder);
-
-                let finalExeName = exeName;
-                if (!finalExeName) {
-                    finalExeName = findExecutableInFolder(gameFolder, gameName);
-                }
-
-                event.sender.send('download-progress', {
-                    status: 'downloading',
-                    gameName,
-                    percent: 100,
-                    transferredMB: '',
-                    totalMB: '',
-                    etaStr: 'Fetching game artwork...'
-                });
-
-                let gameCover = cover || "images/images.jpg";
-                let gameHero = null;
-                let gameLogo = null;
-
-                try {
-                    const fetchedArtwork = await fetchDefaultGameArtwork(gameName);
-                    if (fetchedArtwork.cover) gameCover = fetchedArtwork.cover;
-                    gameHero = fetchedArtwork.hero;
-                    gameLogo = fetchedArtwork.logo;
-                } catch (artErr) {
-                    console.error("Failed to fetch artwork automatically:", artErr);
-                }
-
-                saveGameToLibrary({
-                    name: gameName,
-                    version: version || "1.0.0",
-                    cover: gameCover,
-                    hero: gameHero,
-                    logo: gameLogo,
-                    exe: finalExeName,
-                    path: path.join(gameFolder, finalExeName)
-                });
-
-                event.sender.send('download-progress', { status: 'completed', gameName });
-            } catch (extractErr) {
-                console.error('Failed to extract archive:', extractErr);
-            }
+        const fileStream = fs.createWriteStream(zipPath);
+        const waitForDrain = () => new Promise((resolve, reject) => {
+            const onDrain = () => { cleanup(); resolve(); };
+            const onError = error => { cleanup(); reject(error); };
+            const onAbort = () => { cleanup(); reject(new Error('Download cancelled.')); };
+            const cleanup = () => {
+                fileStream.removeListener('drain', onDrain);
+                fileStream.removeListener('error', onError);
+                signal.removeEventListener('abort', onAbort);
+            };
+            fileStream.once('drain', onDrain);
+            fileStream.once('error', onError);
+            signal.addEventListener('abort', onAbort, { once: true });
         });
+        try {
+            while (true) {
+                if (signal.aborted) throw new Error('Download cancelled.');
+                const { done, value } = await reader.read();
+                if (done) break;
+                transferredBytes += value.length;
+                if (!fileStream.write(Buffer.from(value))) await waitForDrain();
 
-        return { success: true };
+                const percent = totalBytes ? Math.min(100, (transferredBytes / totalBytes) * 100) : 0;
+                const transferredMB = (transferredBytes / (1024 * 1024)).toFixed(1);
+                const totalMB = totalBytes ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+                const elapsedSec = Math.max(0.1, (Date.now() - startTime) / 1000);
+                const remainingSec = totalBytes ? Math.ceil((totalBytes - transferredBytes) / (transferredBytes / elapsedSec || 1)) : 0;
+                reportDownloadProgress(job, {
+                    status: 'downloading', percent, transferredMB, totalMB,
+                    etaStr: totalBytes ? `${Math.floor(remainingSec / 60)}m ${remainingSec % 60}s left` : 'Downloading…'
+                });
+            }
+            await new Promise((resolve, reject) => {
+                const cleanup = () => {
+                    fileStream.removeListener('error', onError);
+                    fileStream.removeListener('finish', onFinish);
+                    signal.removeEventListener('abort', onAbort);
+                };
+                const onError = error => { cleanup(); reject(error); };
+                const onFinish = () => { cleanup(); resolve(); };
+                const onAbort = () => { fileStream.destroy(); cleanup(); reject(new Error('Download cancelled.')); };
+                fileStream.once('error', onError);
+                fileStream.once('finish', onFinish);
+                signal.addEventListener('abort', onAbort, { once: true });
+                fileStream.end();
+            });
+        } catch (error) {
+            reader.cancel().catch(() => {});
+            fileStream.destroy();
+            if (!fileStream.closed) await new Promise(resolve => fileStream.once('close', resolve));
+            throw error;
+        }
 
+        if (signal.aborted) throw new Error('Download cancelled.');
+        reportDownloadProgress(job, { status: 'downloading', percent: 100, transferredMB: '', totalMB: '', etaStr: 'Extracting game files…' });
+        await extractArchive(zipPath, gameFolder);
+        if (signal.aborted) throw new Error('Download cancelled.');
+        if (fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
+        flattenIfSingleSubfolder(gameFolder);
+
+        let finalExeName = exeName || findExecutableInFolder(gameFolder, gameName);
+        reportDownloadProgress(job, { status: 'downloading', percent: 100, transferredMB: '', totalMB: '', etaStr: 'Fetching game artwork…' });
+        let gameCover = cover || 'images/images.jpg';
+        let gameHero = null;
+        let gameLogo = null;
+        try {
+            const fetchedArtwork = await fetchDefaultGameArtwork(gameName);
+            if (fetchedArtwork.cover) gameCover = fetchedArtwork.cover;
+            gameHero = fetchedArtwork.hero;
+            gameLogo = fetchedArtwork.logo;
+        } catch (artErr) {
+            console.error('Failed to fetch artwork automatically:', artErr);
+        }
+
+        saveGameToLibrary({ name: gameName, version: version || '1.0.0', cover: gameCover, hero: gameHero, logo: gameLogo, exe: finalExeName, path: path.join(gameFolder, finalExeName) });
     } catch (error) {
-        console.error("Download failed:", error);
-        if (zipPath && fs.existsSync(zipPath)) {
-            fs.unlinkSync(zipPath);
-        }
-
+        console.error('Download failed:', error);
+        if (zipPath && fs.existsSync(zipPath)) fs.unlinkSync(zipPath);
         const errStr = error.message || '';
-        if (
-            errStr.includes('TLS') || 
-            errStr.includes('socket disconnected') || 
-            errStr.includes('ECONNRESET') || 
-            errStr.includes('CERT') ||
-            errStr.includes('net::')
-        ) {
-            throw new Error('Fatal error with TLS handshake, downloads cannot be reach at this time!');
+        if (!signal.aborted && (errStr.includes('TLS') || errStr.includes('socket disconnected') || errStr.includes('ECONNRESET') || errStr.includes('CERT') || errStr.includes('net::'))) {
+            throw new Error('Fatal error with TLS handshake, downloads cannot be reached at this time!');
         }
-
         throw error;
     }
+}
+
+async function runDownloadQueue() {
+    if (downloadQueueRunning) return;
+    downloadQueueRunning = true;
+    while (downloadQueue.length) {
+        const job = downloadQueue.shift();
+        activeDownloadJob = job;
+        activeDownloadController = new AbortController();
+        broadcastDownloadState();
+        try {
+            reportDownloadProgress(job, { status: 'downloading', percent: 0, transferredMB: '0.0', totalMB: '?', etaStr: 'Connecting…' });
+            if (job.type === 'minecraft') {
+                await performMinecraftInstall(job.version, (progress) => reportDownloadProgress(job, progress), activeDownloadController.signal);
+            } else {
+                await performGameDownload(job.payload, job, activeDownloadController.signal);
+            }
+            reportDownloadProgress(job, { status: 'completed', percent: 100 });
+        } catch (error) {
+            const cancelled = activeDownloadController.signal.aborted;
+            reportDownloadProgress(job, { status: cancelled ? 'cancelled' : 'failed', percent: job.progress?.percent || 0, error: error.message });
+            if (!cancelled) console.error(`Download job failed (${job.title}):`, error);
+        } finally {
+            activeDownloadJob = null;
+            activeDownloadController = null;
+            broadcastDownloadState();
+        }
+    }
+    downloadQueueRunning = false;
+    broadcastDownloadState();
+}
+
+function enqueueDownload(job) {
+    job.id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    job.progress = null;
+    const queued = !!activeDownloadJob || downloadQueue.length > 0;
+    downloadQueue.push(job);
+    broadcastDownloadState();
+    runDownloadQueue();
+    return { id: job.id, queued };
+}
+
+ipcMain.handle('queue-download', (_event, payload) => {
+    if (!payload || typeof payload.gameName !== 'string' || typeof payload.downloadUrl !== 'string') throw new Error('Invalid game download request.');
+    return enqueueDownload({ type: 'game', title: payload.gameName, payload });
 });
 
+ipcMain.handle('queue-minecraft-install', (_event, versionId) => {
+    if (typeof versionId !== 'string' || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Invalid Minecraft version.');
+    if (listMinecraftVersions().includes(versionId)) throw new Error(`Minecraft ${versionId} is already installed.`);
+    if (activeDownloadJob?.type === 'minecraft' && activeDownloadJob.version === versionId) throw new Error(`Minecraft ${versionId} is already downloading.`);
+    if (downloadQueue.some(job => job.type === 'minecraft' && job.version === versionId)) throw new Error(`Minecraft ${versionId} is already queued.`);
+    return enqueueDownload({ type: 'minecraft', title: `Minecraft ${versionId}`, version: versionId });
+});
 
+ipcMain.handle('get-download-state', () => getDownloadState());
 
-// stop download
-ipcMain.handle('stop-download', async (event) => {
-    if (activeDownloadReq) {
-        activeDownloadReq.destroy();
-        activeDownloadReq = null;
-        event.sender.send('download-progress', { status: 'cancelled' });
-        return true;
-    }
-    return false;
+ipcMain.handle('remove-download-from-queue', (_event, jobId) => {
+    const index = downloadQueue.findIndex(job => job.id === jobId);
+    if (index === -1) return false;
+    downloadQueue.splice(index, 1);
+    broadcastDownloadState();
+    return true;
+});
+
+ipcMain.handle('stop-download', async () => {
+    if (!activeDownloadController) return false;
+    activeDownloadController.abort();
+    return true;
 });
 
 
@@ -1352,7 +1394,7 @@ ipcMain.handle('add-minecraft-library', async () => {
     return { versions: listMinecraftVersions() };
 });
 
-async function downloadMinecraftFile(url, destination, expectedSha1) {
+async function downloadMinecraftFile(url, destination, expectedSha1, signal) {
     if (typeof url !== 'string' || !url.startsWith('https://')) throw new Error('Minecraft provided an invalid download URL.');
     if (fs.existsSync(destination)) {
         if (!expectedSha1) return;
@@ -1365,9 +1407,10 @@ async function downloadMinecraftFile(url, destination, expectedSha1) {
         });
         if (existingHash.toLowerCase() === expectedSha1.toLowerCase()) return;
     }
-    const response = await net.fetch(url);
+    const response = await net.fetch(url, { signal });
     if (!response.ok) throw new Error(`Minecraft download failed (HTTP ${response.status}): ${url}`);
     const data = Buffer.from(await response.arrayBuffer());
+    if (signal?.aborted) throw new Error('Minecraft download cancelled.');
     if (expectedSha1) {
         const actualHash = require('crypto').createHash('sha1').update(data).digest('hex');
         if (actualHash.toLowerCase() !== expectedSha1.toLowerCase()) throw new Error(`Minecraft file checksum failed: ${url}`);
@@ -1378,15 +1421,15 @@ async function downloadMinecraftFile(url, destination, expectedSha1) {
     fs.renameSync(tempPath, destination);
 }
 
-ipcMain.handle('install-minecraft-version', async (event, versionId) => {
+async function performMinecraftInstall(versionId, onProgress, signal) {
     if (typeof versionId !== 'string' || !/^[A-Za-z0-9._-]+$/.test(versionId)) throw new Error('Invalid Minecraft version.');
-    const manifestResponse = await net.fetch('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json');
+    const manifestResponse = await net.fetch('https://launchermeta.mojang.com/mc/game/version_manifest_v2.json', { signal });
     if (!manifestResponse.ok) throw new Error('Could not load the official Minecraft version list.');
     const manifest = await manifestResponse.json();
     const versionEntry = manifest.versions.find(item => item.id === versionId && item.type === 'release');
     if (!versionEntry) throw new Error(`Minecraft release ${versionId} was not found.`);
 
-    const versionResponse = await net.fetch(versionEntry.url);
+    const versionResponse = await net.fetch(versionEntry.url, { signal });
     if (!versionResponse.ok) throw new Error(`Could not load Minecraft ${versionId} metadata.`);
     const versionData = await versionResponse.json();
     const versionFolder = path.join(minecraftLibraryPath, versionId);
@@ -1431,7 +1474,7 @@ ipcMain.handle('install-minecraft-version', async (event, versionId) => {
     const assetIndex = versionData.assetIndex;
     if (assetIndex?.url && assetIndex.id) {
         addInstallFile(assetIndex.url, assetIndex.sha1, path.join('assets', 'indexes', `${assetIndex.id}.json`));
-        const assetResponse = await net.fetch(assetIndex.url);
+        const assetResponse = await net.fetch(assetIndex.url, { signal });
         if (!assetResponse.ok) throw new Error(`Could not load Minecraft ${versionId} asset index.`);
         const assetManifest = await assetResponse.json();
         assetObjects = Object.values(assetManifest.objects || {});
@@ -1452,12 +1495,15 @@ ipcMain.handle('install-minecraft-version', async (event, versionId) => {
     const worker = async () => {
         while (nextFile < uniqueFiles.length) {
             const file = uniqueFiles[nextFile++];
-            await downloadMinecraftFile(file.url, file.path, file.sha1);
+            await downloadMinecraftFile(file.url, file.path, file.sha1, signal);
             completed++;
-            event.sender.send('minecraft-install-progress', { version: versionId, completed, total: uniqueFiles.length });
+            onProgress({ status: 'downloading', percent: Math.round((completed / uniqueFiles.length) * 100), completed, total: uniqueFiles.length, etaStr: `Installing files ${completed}/${uniqueFiles.length}` });
         }
     };
-    await Promise.all(Array.from({ length: Math.min(8, uniqueFiles.length) }, worker));
+    const workerResults = await Promise.allSettled(Array.from({ length: Math.min(8, uniqueFiles.length) }, worker));
+    const workerFailure = workerResults.find(result => result.status === 'rejected');
+    if (workerFailure) throw workerFailure.reason;
+    if (signal?.aborted) throw new Error('Minecraft download cancelled.');
     fs.writeFileSync(installedMarkerPath, new Date().toISOString(), 'utf8');
 
     const games = readSavedGames();
@@ -1474,7 +1520,7 @@ ipcMain.handle('install-minecraft-version', async (event, versionId) => {
     minecraftGame.selectedMinecraftVersion = versionId;
     fs.writeFileSync(gamesFilePath, JSON.stringify(games, null, 2), 'utf8');
     return { version: versionId, files: uniqueFiles.length, assetObjects: assetObjects.length };
-});
+}
 
 
 

@@ -235,114 +235,54 @@ if (refreshButton) {
     const banner = document.querySelector('.active-download-banner');
     const title = banner ? banner.querySelector('h2') : null;
     const statusText = banner ? banner.querySelector('p') : null;
-    const progressFill = document.querySelector('.download-bar-fill');
+    const progressFill = banner ? banner.querySelector('.download-bar-fill') : null;
     const stopBtn = document.getElementById('stop-download-button');
     const queueBanner = document.querySelector('.queue-banner');
-
-    const downloadQueue = [];
-    let isDownloading = false;
-    let currentDownloadingGame = null;
 
     if (banner) banner.style.display = 'none';
     if (queueBanner) queueBanner.style.display = 'none';
 
-    // Update the queue banner UI
-    function updateQueueUI() {
+    function renderDownloadState(state) {
         if (!queueBanner) return;
-
-        // Clear existing queue list items
-        const oldParagraphs = queueBanner.querySelectorAll('p');
-        oldParagraphs.forEach(p => p.remove());
-
-        if (downloadQueue.length > 0) {
+        queueBanner.querySelectorAll('p').forEach(p => p.remove());
+        const queue = state?.queue || [];
+        if (queue.length) {
             queueBanner.style.display = 'block';
-
-            downloadQueue.forEach((item, index) => {
+            queue.forEach(item => {
                 const p = document.createElement('p');
                 p.style.cursor = 'pointer';
                 p.title = 'Click to remove from queue';
-
-                let sizeStr = '';
-                if (item.size) {
-                    const rawSize = String(item.size).trim();
-                    sizeStr = /gb|mb|kb/i.test(rawSize) ? rawSize : `${rawSize} GB`;
-                }
-
-                p.textContent = sizeStr ? `${item.gameName} — ${sizeStr}` : item.gameName;
-
-                // Clicking the item directly inside the Queue Banner also removes it
-                p.addEventListener('click', () => {
-                    downloadQueue.splice(index, 1);
-                    updateQueueUI();
-                });
-
+                const rawSize = String(item.size || '').trim();
+                const sizeLabel = rawSize ? (/gb|mb|kb/i.test(rawSize) ? rawSize : `${rawSize} GB`) : '';
+                p.textContent = sizeLabel ? `${item.title} — ${sizeLabel}` : item.title;
+                p.addEventListener('click', () => ipcRenderer.invoke('remove-download-from-queue', item.id).catch(console.error));
                 queueBanner.appendChild(p);
             });
         } else {
             queueBanner.style.display = 'none';
         }
-    }
 
-    // Process queue items sequentially
-    async function processQueue() {
-        if (downloadQueue.length === 0) {
-            isDownloading = false;
-            currentDownloadingGame = null;
-            return;
-        }
-
-        isDownloading = true;
-        const currentItem = downloadQueue.shift();
-        currentDownloadingGame = currentItem.gameName;
-        updateQueueUI(); 
-
-        if (banner) banner.style.display = 'block';
-        if (title) title.textContent = currentItem.gameName;
-        if (statusText) statusText.textContent = 'Connecting...';
-        if (progressFill) progressFill.style.width = '0%';
-
-        try {
-            await ipcRenderer.invoke('start-download', {
-                gameName: currentItem.gameName,
-                downloadUrl: currentItem.downloadUrl,
-                exeName: currentItem.exeName || `${currentItem.gameName}.exe`,
-                version: currentItem.version
-            });
-        } catch (err) {
-            console.warn(`Download ended or failed for ${currentItem.gameName}:`, err);
-        } finally {
-            currentDownloadingGame = null;
-            setTimeout(() => {
-                processQueue();
-            }, 1000);
+        const active = state?.active;
+        if (active && banner) {
+            banner.style.display = 'block';
+            if (title) title.textContent = active.title;
+            const progress = active.progress || {};
+            if (statusText && progress.status === 'downloading') {
+                statusText.textContent = active.type === 'minecraft'
+                    ? `${progress.etaStr || 'Installing Minecraft…'} (${progress.completed || 0}/${progress.total || 0} files)`
+                    : `Installing. ${progress.transferredMB || '0.0'} MB / ${progress.totalMB || '?'} MB — ${progress.etaStr || ''}`;
+            }
+            if (progressFill) progressFill.style.width = `${Number(progress.percent || 0)}%`;
         }
     }
 
-    // Global helper called when clicking a game card
     window.downloadGame = async function(gameName, downloadUrl, exeName, version, size) {
-        // 1. If game is already waiting in queue -> Remove it
-        const queueIndex = downloadQueue.findIndex(item => item.gameName === gameName);
-        if (queueIndex !== -1) {
-            downloadQueue.splice(queueIndex, 1);
-            updateQueueUI();
-            return;
-        }
-
-        // 2. If game is currently downloading -> Cancel download
-        if (currentDownloadingGame === gameName) {
-            await ipcRenderer.invoke('stop-download');
-            return;
-        }
-
-        // 3. Otherwise add to queue / start download
-        const gameItem = { gameName, downloadUrl, exeName, version, size };
-
-        if (!isDownloading) {
-            downloadQueue.push(gameItem);
-            processQueue();
-        } else {
-            downloadQueue.push(gameItem);
-            updateQueueUI();
+        try {
+            return await ipcRenderer.invoke('queue-download', {
+                gameName, downloadUrl, exeName: exeName || `${gameName}.exe`, version, size
+            });
+        } catch (error) {
+            console.error(`Could not queue ${gameName}:`, error);
         }
     };
 
@@ -352,32 +292,34 @@ if (refreshButton) {
         });
     }
 
-    ipcRenderer.on('download-progress', (event, data) => {
+    ipcRenderer.on('download-state', (_event, state) => renderDownloadState(state));
+    ipcRenderer.invoke('get-download-state').then(renderDownloadState).catch(console.error);
+
+    ipcRenderer.on('download-progress', (_event, data) => {
         if (!banner) return;
 
         if (data.status === 'downloading') {
             banner.style.display = 'block';
-            if (title) title.textContent = data.gameName;
+            if (title) title.textContent = data.title || data.gameName;
             if (statusText) {
-                statusText.textContent = `Installing. ${data.transferredMB} MB / ${data.totalMB} MB — ${data.etaStr}`;
+                statusText.textContent = data.type === 'minecraft'
+                    ? `${data.etaStr || 'Installing Minecraft…'} (${data.completed || 0}/${data.total || 0} files)`
+                    : `Installing. ${data.transferredMB || '0.0'} MB / ${data.totalMB || '?'} MB — ${data.etaStr || ''}`;
             }
             if (progressFill) {
-                progressFill.style.width = `${data.percent.toFixed(1)}%`;
+                progressFill.style.width = `${Number(data.percent || 0).toFixed(1)}%`;
             }
         } else if (data.status === 'completed') {
-            if (statusText) statusText.textContent = 'Download Complete! Added to Library.';
+            if (statusText) statusText.textContent = data.type === 'minecraft' ? 'Minecraft installation complete.' : 'Download Complete! Added to Library.';
             if (progressFill) progressFill.style.width = '100%';
-
-            setTimeout(() => {
-                if (downloadQueue.length === 0 && !isDownloading) {
-                    banner.style.display = 'none';
-                }
-            }, 1500);
-        } else if (data.status === 'cancelled') {
-            currentDownloadingGame = null;
-            if (downloadQueue.length === 0) {
-                banner.style.display = 'none';
-            }
+            setTimeout(() => ipcRenderer.invoke('get-download-state').then(state => {
+                if (!state.active && banner) banner.style.display = 'none';
+            }).catch(console.error), 1500);
+        } else if (data.status === 'cancelled' || data.status === 'failed') {
+            if (statusText) statusText.textContent = data.status === 'cancelled' ? 'Download cancelled.' : `Download failed: ${data.error || 'Unknown error'}`;
+            setTimeout(() => ipcRenderer.invoke('get-download-state').then(state => {
+                if (!state.active && banner) banner.style.display = 'none';
+            }).catch(console.error), 1500);
         }
     });
 })();

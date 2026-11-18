@@ -413,25 +413,30 @@ async function loadVersions() {
     versionBox.replaceChildren();
     statusText.textContent = 'Choose a release to download.';
     try {
-        const [versions, installed] = await Promise.all([
+        const [versions, installed, downloadState] = await Promise.all([
             ipcRenderer.invoke('get-available-minecraft-versions'),
-            ipcRenderer.invoke('get-minecraft-versions')
+            ipcRenderer.invoke('get-minecraft-versions'),
+            ipcRenderer.invoke('get-download-state')
+        ]);
+        const pendingMinecraftTitles = new Set([
+            ...(downloadState.active?.type === 'minecraft' ? [downloadState.active.title] : []),
+            ...downloadState.queue.filter(job => job.type === 'minecraft').map(job => job.title)
         ]);
         if (!versions.length) versionBox.textContent = 'No Minecraft releases were found.';
         versions.forEach(version => {
             const option = document.createElement('button');
             option.type = 'button';
             option.className = 'minecraft-dropdown-item';
-            option.disabled = installed.includes(version.id);
-            option.textContent = `Minecraft ${version.id}${option.disabled ? ' (Installed)' : ' — Download'}`;
+            const isInstalled = installed.includes(version.id);
+            const isQueued = pendingMinecraftTitles.has(`Minecraft ${version.id}`);
+            option.disabled = isInstalled || isQueued;
+            option.textContent = `Minecraft ${version.id}${isInstalled ? ' (Installed)' : isQueued ? ' (Queued)' : ' — Download'}`;
             option.addEventListener('click', async () => {
                 option.disabled = true;
-                statusText.textContent = `Downloading Minecraft ${version.id}…`;
+                statusText.textContent = `Queued Minecraft ${version.id}…`;
                 try {
-                    const result = await ipcRenderer.invoke('install-minecraft-version', version.id);
-                    statusText.textContent = `Minecraft ${result.version} installed.`;
-                    await setupMinecraftVersions();
-                    await loadVersions();
+                    await ipcRenderer.invoke('queue-minecraft-install', version.id);
+                    option.textContent = `Minecraft ${version.id} (Queued)`;
                 } catch (error) {
                     console.error('Minecraft installation failed:', error);
                     statusText.textContent = `Could not install ${version.id}: ${error.message}`;
@@ -445,6 +450,25 @@ async function loadVersions() {
         versionBox.textContent = 'Failed to load Minecraft versions.'
     }
 }
+
+ipcRenderer.on('download-state', (_event, state) => {
+    const statusText = document.getElementById('versions-text');
+    if (state.active?.type === 'minecraft' && statusText) {
+        statusText.textContent = `Downloading Minecraft ${state.active.title.replace('Minecraft ', '')}…`;
+    }
+});
+
+ipcRenderer.on('download-progress', async (_event, progress) => {
+    if (progress.type !== 'minecraft') return;
+    const statusText = document.getElementById('versions-text');
+    if (progress.status === 'completed') {
+        if (statusText) statusText.textContent = `${progress.title} installed.`;
+        await setupMinecraftVersions();
+        await loadVersions();
+    } else if (progress.status === 'failed' && statusText) {
+        statusText.textContent = `Could not install ${progress.title}: ${progress.error}`;
+    }
+});
 
 ipcRenderer.on('minecraft-install-progress', (_event, progress) => {
     const statusText = document.getElementById('versions-text');
