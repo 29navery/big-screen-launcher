@@ -40,7 +40,7 @@
     transition: all 170ms;
 }
 
-.bottom-nav-bar button:hover {
+.bottom-nav-bar button:is(:hover, .gamepad-hover) {
     background-color: var(--addons-nav-hover-background-color);
     box-shadow: var(--addons-nav-glow-color) 0 0 15px;
 }

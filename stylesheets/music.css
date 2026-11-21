@@ -40,7 +40,7 @@
     transition: all 100ms;
 }
 
-.playlist-item:hover {
+.playlist-item:is(:hover, .gamepad-hover) {
     background-color: var(--playlist-button-color-selected);
 }
 
@@ -95,7 +95,7 @@
     margin-right: 10px;
 }
 
-.song-item:hover {
+.song-item:is(:hover, .gamepad-hover) {
     background-color: var(--playlist-button-color-selected);
 }
 
@@ -117,7 +117,7 @@
     transition: all 200ms;
 }
 
-#song-controls img:hover {
+#song-controls img:is(:hover, .gamepad-hover) {
     transform: scale(1.1);
     filter: invert(80%);
 }

@@ -83,7 +83,7 @@ a {
     text-decoration: none;
 }
 
-a:hover {
+a:is(:hover, .gamepad-hover) {
     text-decoration: underline;
 }
 
@@ -202,7 +202,7 @@ nav button {
     transition: all 200ms;
 }
 
-nav button:hover {
+nav button:is(:hover, .gamepad-hover) {
     background-color: var(--rail-button-color-selected);
     border: 3px solid var(--rail-button-outline-color-selected);
     cursor: pointer;
@@ -256,7 +256,7 @@ nav button:hover {
     -webkit-user-drag: none;
 }
 
-div.grid-item:hover {
+div.grid-item:is(:hover, .gamepad-hover) {
     transform: translateY(-2px);
     border: 1px solid #fff;
     cursor: pointer;
@@ -317,7 +317,7 @@ img.grid-item {
     transition: all 0ms;
 }
 
-.preferable-button:enabled:hover {
+.preferable-button:enabled:is(:hover, .gamepad-hover) {
     box-shadow: #0003 5px 5px 20px;
     transform: scale(1.025);
     cursor: pointer;
@@ -339,7 +339,7 @@ img.grid-item {
     transition: all 200ms;
 }
 
-.normal-button:hover {
+.normal-button:is(:hover, .gamepad-hover) {
     box-shadow: #0003 5px 5px 20px;
     transform: scale(1.025);
 }
@@ -461,7 +461,7 @@ input[type='checkbox']:disabled {
     transition: background 0.1s ease;
 }
 
-.context-menu li:hover {
+.context-menu li:is(:hover, .gamepad-hover) {
     background: var(--important-button-color);
     color: #ffffff;
 }
@@ -683,7 +683,7 @@ input:focus {
     transition: all 100ms;
 }
 
-#emu-selector > button:enabled:hover {
+#emu-selector > button:enabled:is(:hover, .gamepad-hover) {
     background-color: #353537;
     cursor: pointer;
 }
@@ -692,7 +692,7 @@ input:focus {
     color: #ccc;
 }
 
-#emu-selector > button.selected, #emu-selector > button.selected:hover {
+#emu-selector > button.selected, #emu-selector > button.selected:is(:hover, .gamepad-hover) {
     background-color: var(--important-button-color);
     border-color: var(--rail-button-outline-color-selected);
     color: #fff;
@@ -744,4 +744,19 @@ input:focus {
     background: linear-gradient(to right, var(--downloading-bar-color1), var(--downloading-bar-color2) );
     border-radius: 100px;
     box-shadow: var(--downloading-bar-glow) 0px 0px 15px;
+}
+
+.gamepadSelectedFrame {
+    display: none;
+    position: fixed;
+    box-sizing: border-box;
+    z-index: 100000;
+    pointer-events: none;
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    outline: 4px solid rgba(103, 95, 255, 0.5);
+    transition: left 110ms cubic-bezier(0.33, 1, 0.68, 1), top 110ms cubic-bezier(0.33, 1, 0.68, 1), width 110ms cubic-bezier(0.33, 1, 0.68, 1), height 110ms cubic-bezier(0.33, 1, 0.68, 1), border-radius 110ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+button:focus {
+    outline: 0;
 }

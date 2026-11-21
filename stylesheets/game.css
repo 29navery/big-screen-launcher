@@ -133,7 +133,7 @@
     transition: all 200ms;
 }
 
-.minecraft-version-divider:hover {
+.minecraft-version-divider:is(:hover, .gamepad-hover) {
     background-color: #333336;
 }
 
@@ -161,7 +161,7 @@
     transition: all 200ms;
 }
 
-.minecraft-dropdown-item:hover {
+.minecraft-dropdown-item:is(:hover, .gamepad-hover) {
     background-color: #333336;
 }
 
@@ -209,7 +209,7 @@
     transition: all 100ms;
 }
 
-.game-options-button:hover {
+.game-options-button:is(:hover, .gamepad-hover) {
     transform: scale(1.025);
     box-shadow: #0003 0 0 6px;
 }
@@ -288,7 +288,7 @@
     transition: all 200ms;
 }
 
-.play-button:hover {
+.play-button:is(:hover, .gamepad-hover) {
     box-shadow: #0003 5px 5px 20px;
     transform: scale(1.025);
 }
