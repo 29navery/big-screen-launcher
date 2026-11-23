@@ -57,20 +57,18 @@ function isUpdateAvailable(localVersion, remoteVersion) {
     } catch (err) {
         console.warn("Could not load local library for version checking:", err);
     }
-
+    
     const cachedData = localStorage.getItem('tungsten_games_cache');
-
     if (cachedData) {
-        games = JSON.parse(cachedData);
-    } else {
-        try {
-            const response = await fetch('https://tungstenball.org/games.json');
-            games = await response.json();
-            localStorage.setItem('tungsten_games_cache', JSON.stringify(games));
-        } catch(error) {
-            console.error("Couldn't load games.json.", error);
-            return;
-        }
+        localStorage.removeItem('tungsten_games_cache')
+    }
+
+    try {
+        const response = await fetch('https://tungstenball.org/games.json');
+        games = await response.json();
+    } catch(error) {
+        console.error("Couldn't load games.json.", error);
+        return;
     }
 
     try {
