@@ -57,7 +57,7 @@
     transition: all 200ms;
 }
 
-.stop-download-button:hover {
+.stop-download-button:is(:hover, .gamepad-hover) {
     box-shadow: rgba(165, 3, 3, 0.2) 5px 5px 20px;
     transform: scale(1.025);
 }
@@ -162,7 +162,7 @@
     z-index: 1;
 }
 
-.download-grid button:hover {
+.download-grid button:is(:hover, .gamepad-hover) {
     border: 2px solid #fff5;
     transform: translateY(-5px);
     box-shadow: #0003 0 2px 12px;
