@@ -12,20 +12,23 @@
 .bottom-nav-bar {
     display: flex;
     flex-flow: row nowrap;
+
+    box-sizing: border-box;
     
     height: fit-content;
     width: 100%;
 
+    margin-top: auto;
+
     justify-content: center;
     align-self: center;
-    left: 0;
 
     gap: 10px;
 
-    position: absolute;
+    position: sticky;
     bottom: 24px;
 
-    z-index: -1;
+    z-index: 999;
 }
 
 .bottom-nav-bar button {
@@ -60,10 +63,13 @@
 
 .themes-grid {
     display: flex;
+    flex-flow: row wrap;
 
     grid-gap: 12px;
     justify-content: center;
     align-items: flex-start;
+
+    min-height: calc(100vh - 180px);
 }
 
 .themes-grid > .theme {
