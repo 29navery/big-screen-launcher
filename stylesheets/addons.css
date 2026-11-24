@@ -5,6 +5,8 @@
     
     --addons-nav-hover-background-color: #675fff;
     --addons-nav-glow-color: #675fff93;
+    
+    --addons-button-background: #17181a;
 }
 
 .bottom-nav-bar {
@@ -41,6 +43,7 @@
 }
 
 .bottom-nav-bar button:is(:hover, .gamepad-hover) {
+.bottom-nav-bar button:is(:hover, .gamepad-hover) {
     background-color: var(--addons-nav-hover-background-color);
     box-shadow: var(--addons-nav-glow-color) 0 0 15px;
 }
@@ -53,4 +56,55 @@
 .bottom-nav-bar #themes-button {
     border-top-left-radius: 1em;
     border-bottom-left-radius: 1em;
+}
+
+
+.addons-grid {
+    display: flex;
+
+    grid-gap: 12px;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.addons-grid > .addon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-flow: column nowrap;
+
+    background-color: var(--addons-button-background);
+
+    border: 0.2em solid #16161a86;
+    border-radius: 0.6em;
+
+    gap: 12px;
+
+    width: 200px;
+    height: 200px;
+
+    transition: all 150ms;
+}
+
+.addons-grid > .addon:hover {
+    cursor: pointer;
+
+    transform: translateY(-2px);
+
+    border: 0.1em solid #fff2;
+
+    box-shadow: rgba(0, 0, 0, 0.3) 1px 4px 15px;
+}
+
+.addons-grid > .addon > div {
+    background-color: black;
+    
+    width: 124px;
+    height: 100px;
+
+    border-radius: 0.6em;
+}
+
+.addons-grid > .addon > p {
+    color: #ccc;
 }
