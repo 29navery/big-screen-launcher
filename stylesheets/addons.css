@@ -43,7 +43,6 @@
 }
 
 .bottom-nav-bar button:is(:hover, .gamepad-hover) {
-.bottom-nav-bar button:is(:hover, .gamepad-hover) {
     background-color: var(--addons-nav-hover-background-color);
     box-shadow: var(--addons-nav-glow-color) 0 0 15px;
 }
@@ -80,7 +79,7 @@
 
     gap: 12px;
 
-    width: 200px;
+    width: 180px;
     height: 200px;
 
     transition: all 150ms;
@@ -99,7 +98,7 @@
 .addons-grid > .addon > div {
     background-color: black;
     
-    width: 124px;
+    width: 100px;
     height: 100px;
 
     border-radius: 0.6em;

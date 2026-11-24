@@ -1,0 +1,109 @@
+:root {
+    --addons-nav-background-color: #1c1d1f;
+    --addons-nav-border-color: #4d5052;
+    --addons-nav-text-color: rgb(255, 255, 255);
+    
+    --addons-nav-hover-background-color: #675fff;
+    --addons-nav-glow-color: #675fff93;
+    
+    --addons-button-background: #17181a;
+}
+
+.bottom-nav-bar {
+    display: flex;
+    flex-flow: row nowrap;
+    
+    height: fit-content;
+    width: 100%;
+
+    justify-content: center;
+    align-self: center;
+    left: 0;
+
+    gap: 10px;
+
+    position: absolute;
+    bottom: 24px;
+
+    z-index: -1;
+}
+
+.bottom-nav-bar button {
+    border-radius: 5em;
+
+    width: 98px;
+    height: 44px;
+    cursor: pointer;
+
+    background-color: var(--addons-nav-background-color);
+    color: var(--addons-nav-text-color);
+    border: 1px solid var(--addons-nav-border-color);
+
+    transition: all 170ms;
+}
+
+.bottom-nav-bar button:is(:hover, .gamepad-hover) {
+    background-color: var(--addons-nav-hover-background-color);
+    box-shadow: var(--addons-nav-glow-color) 0 0 15px;
+}
+
+.bottom-nav-bar #addons-button {
+    border-top-right-radius: 1em;
+    border-bottom-right-radius: 1em;
+}
+
+.bottom-nav-bar #themes-button {
+    border-top-left-radius: 1em;
+    border-bottom-left-radius: 1em;
+}
+
+
+.themes-grid {
+    display: flex;
+
+    grid-gap: 12px;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.themes-grid > .theme {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-flow: column nowrap;
+
+    background-color: var(--addons-button-background);
+
+    border: 0.2em solid #16161a86;
+    border-radius: 0.6em;
+
+    padding: 8px;
+
+    width: 260px;
+    height: 216px;
+
+    transition: all 150ms;
+}
+
+.themes-grid > .theme:hover {
+    cursor: pointer;
+
+    transform: translateY(-2px);
+
+    border: 0.1em solid #fff2;
+
+    box-shadow: rgba(0, 0, 0, 0.3) 1px 4px 15px;
+}
+
+.themes-grid > .theme > div {
+    background-color: black;
+    
+    width: 100%;
+    height: 85%;
+
+    border-radius: 0.5em;
+}
+
+.themes-grid > .theme > p {
+    color: #ccc;
+}

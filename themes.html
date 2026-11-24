@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <!-- Google Fonts -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="styles.css">
+        <link rel="stylesheet" href="/stylesheets/themes.css">
+    </head>
+    <body>
+        <header>
+            <img src="favicon.ico">
+            <p>Big Screen Launcher</p>
+            <p id="version-number" style="font-size: 13px;">v26.0</p>
+            <div class="top-download-bar" id="topbar-download-container">
+                <p id="topbar-download-text">Downloading...</p>
+                <div class="download-bar">
+                    <div class="download-bar-fill" id="topbar-download-progress"></div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <nav>
+                <button id="library-button"><img class="rail-button-icon" src="svg/library.svg"></button>
+                <button id="downloads-button"><img class="rail-button-icon" src="svg/download.svg"></button>
+                <button id="settings-button"><img class="rail-button-icon" src="svg/gear.svg"></button>
+                <button id="player-button"><img class="rail-button-icon" src="svg/disc.svg"></button>
+                <button id="report-button" style="position: absolute; bottom: 15px; font-size: 24px;">📢</button>
+            </nav>
+            <div id="content">
+                <div class="bottom-nav-bar">
+                    <button id="addons-button">Addons</button>
+                    <button id="themes-button">Themes</button>
+                </div>
+                <h1 style="text-indent:25px;">Themes</h1>
+                <div class="themes-grid">
+                    <div class="theme">
+                        <div></div>
+                        <p>Theme-name</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+
+<!-- it is REQUIRED that script.js comes first -->
+<script src="script.js"></script>
+<script src="javascript/addons.js"></script>
