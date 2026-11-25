@@ -1,4 +1,5 @@
 {
     "beta": true,
-    "piran": true
+    "piran": true,
+    "addonsEnabled": false
 }
