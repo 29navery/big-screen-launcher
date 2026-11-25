@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("report-button").remove()
     }
     if (!addonsEnabled) {
-        document.getElementById("addons-button").remove()
+        document.getElementById("plugins-button").remove()
     }
 });
 
@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener('click', (e) => {
     const libraryBtn = e.target.closest('#library-button');
     const downloadsBtn = e.target.closest('#downloads-button');
-    const addonsBtn = e.target.closest('#addons-button');
+    const addonsBtn = e.target.closest('#plugins-button');
     const settingsBtn = e.target.closest('#settings-button');
     const playerBtn = e.target.closest('#player-button');
     const reportBtn = e.target.closest('#report-button');
