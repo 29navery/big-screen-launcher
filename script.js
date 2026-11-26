@@ -5,10 +5,14 @@ const fs = require("node:fs");
 const filePath = path.join(__dirname, "app-data.json");
 const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
 const beta = data.beta;
+const addonsEnabled = data.addonsEnabled;
 
 document.addEventListener("DOMContentLoaded", () => {
     if (!beta) {
         document.getElementById("report-button").remove()
+    }
+    if (!addonsEnabled) {
+        document.getElementById("plugins-button").remove()
     }
 });
 
@@ -16,12 +20,14 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener('click', (e) => {
     const libraryBtn = e.target.closest('#library-button');
     const downloadsBtn = e.target.closest('#downloads-button');
+    const addonsBtn = e.target.closest('#plugins-button');
     const settingsBtn = e.target.closest('#settings-button');
     const playerBtn = e.target.closest('#player-button');
     const reportBtn = e.target.closest('#report-button');
 
     if (libraryBtn) window.location.href = 'index.html';
     if (downloadsBtn) window.location.href = 'downloads.html';
+    if (addonsBtn) window.location.href = 'addons.html';
     if (settingsBtn) window.location.href = 'settings.html';
     if (playerBtn) window.location.href = 'music.html';
     if (reportBtn) window.location.href = 'report.html';
