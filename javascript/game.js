@@ -163,8 +163,6 @@ async function playSound(fileName) {
 
 const launchButton = document.getElementById('play-button');
 
-
-
 async function launchGame(index) {
     const games = await ipcRenderer.invoke('load-games');
     const game = games[index];
@@ -285,16 +283,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function updateButtonState(button, status) {
+    button.textContent = '';
+    const buttonImg = document.createElement('img');
+    const buttonText = document.createElement('span');
     if (status === 'starting') {
-        button.textContent = '✖ Starting . . .';
+        button.textContent = '✖ STARTING . . .';
         button.style.setProperty('background-color', '#4eb7d1')
         button.disabled = true;
     } else if (status === 'running') {
-        button.textContent = '✖ Stop';
+        button.textContent = '✖ STOP';
         button.style.setProperty('background-color', '#4eb7d1')
         button.disabled = false;
     } else {
-        button.textContent = '▶ Start';
+        buttonImg.src = 'svg/play.svg';
+        button.appendChild(buttonImg);
+        button.appendChild(buttonText);
+        buttonText.textContent = 'START';
         button.style.setProperty('background-color', '')
         button.disabled = false;
     }
