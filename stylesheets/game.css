@@ -271,7 +271,10 @@
 .play-button {
     border-radius: 7px;
     background-color: rgb(61, 177, 31);
-    font-size: 19px;
+
+    font-size: 21px;
+    font-family: "Roboto", Arial, Helvetica, sans-serif;
+    font-weight: 500;
     color: #fff;
 
     border: 1px solid #fff5;
@@ -281,16 +284,17 @@
     cursor: pointer;
     width: 200px;
 
-    justify-content: center;
-    align-content: center;
-    text-decoration: none;
-
     transition: all 200ms;
 }
 
 .play-button:is(:hover, .gamepad-hover) {
     box-shadow: #0003 5px 5px 20px;
     transform: scale(1.025);
+}
+
+.play-button > img {
+    width: 13px;
+    margin-right: 8px;
 }
 
 /*   OPTIONS MENU   */
