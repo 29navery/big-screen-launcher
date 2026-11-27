@@ -287,11 +287,17 @@ function updateButtonState(button, status) {
     const buttonImg = document.createElement('img');
     const buttonText = document.createElement('span');
     if (status === 'starting') {
-        button.textContent = '✖ STARTING . . .';
+        buttonImg.src = 'svg/x.svg';
+        button.appendChild(buttonImg);
+        button.appendChild(buttonText);
+        buttonText.textContent = 'STARTING...';
         button.style.setProperty('background-color', '#4eb7d1')
         button.disabled = true;
     } else if (status === 'running') {
-        button.textContent = '✖ STOP';
+        buttonImg.src = 'svg/stop.svg';
+        button.appendChild(buttonImg);
+        button.appendChild(buttonText);
+        buttonText.textContent = 'STOP';
         button.style.setProperty('background-color', '#4eb7d1')
         button.disabled = false;
     } else {
